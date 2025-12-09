@@ -94,63 +94,60 @@ buttonLogout {
 <body>
 	
 <div class="container">
-		<buttonlogout onclick="logout()">Logout</buttonlogout>
+	<buttonlogout onclick="logout()">Logout</buttonlogout> 
     <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
 
     <h2>Requestor Dashboard</h2>
 
-    <div class="requestor-info" align="justify">
-        
+    <div class="requestor-info">
         <div class="field-group">
             <label for="name">Name:</label>
             <input type="text" required id="name" placeholder="Requestor Name">
         </div>
-
         <div class="field-group">
             <label for="date">Date Needed:</label>
-          <input type="date" required id="date">
+            <input type="date" required id="date">
         </div>
     </div>
 	
-  <div class="requestor-info" align="justify">
-        
+    <div class="requestor-info">
         <div class="field-group">
             <label for="department">Department:</label>
-            <input type="text" required id="Department" placeholder="Requestor Department">
+            <input type="text" required id="department" placeholder="Requestor Department">
         </div>
 
         <div class="field-group">
             <label for="location">Location</label>
-          <input type="text" required id="Location">
+            <input type="text" required id="location">
         </div>
     </div>
-    
-    <button onclick="Submit()">Submit</button>
-    <div style="clear: both;"></div> 
+        
+    <button onclick="Submit()">Submit</button> 
+    <div style="clear: both;"></div> 
     <p id="message"></p>
 </div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="firebase.js"></script>
 
 <script>
 // Check if user is signed in when the page loads
 auth.onAuthStateChanged(function(user) {
-    if (user) {
-        document.getElementById("user-email").innerText = user.email;
-    } else {
-        // Redirection on failure
-        window.location.href = "index.html"; 
-    }
+    if (user) {
+        document.getElementById("user-email").innerText = user.email;
+    } else {
+        // Redirection on failure
+        window.location.href = "index.html"; 
+    }
 });
 
 function logout() {
-    auth.signOut().then(() => {
-        // Redirection happens automatically via onAuthStateChanged listener
-    }).catch((error) => {
-        alert("Error logging out: " + error.message);
-    });
+    auth.signOut().then(() => {
+        // Redirection happens automatically
+    }).catch((error) => {
+        alert("Error logging out: " + error.message);
+    });
+}
+// You will need to define the function Submit() here to avoid errors
+function Submit() {
+    alert("Submit function is ready to be written!");
 }
 </script>
 
