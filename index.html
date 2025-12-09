@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Firebase Passwordless Login</title>
+<title>Secure Login</title>
 <style>
 /* Basic Styles for Clarity */
 body {
@@ -51,95 +51,76 @@ button {
 <body>
 
 <div class="container">
-    <h2>Login (Email Link)</h2>
+    <h2>Secure Login</h2>
 
-    <input type="email" required id="user-email" placeholder="Your Email Address">
+    <input type="text" required id="username" placeholder="Username">
+    
+    <input type="password" required id="password" placeholder="Password">
 
-    <button onclick="sendSignInLink()">Login</button>
+    <button onclick="login()">Login</button>
 
     <p id="message"></p>
-</div>
+    
+    </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
 <script src="firebase.js"></script>
 
 <script>
-// !!! IMPORTANT: Replace this URL with your actual deployed dashboard URL !!!
-const actionCodeSettings = {
-    // This must match the URL you authorized in the Firebase console settings.
-    url: 'https://znarf0110.github.io/equipment-request-form/requestordashboard.html', 
-    handleCodeInApp: true,
-};
-
 /**
- * 1. Sends the email link to the user's provided email.
+ * Handles the login process:
+ * 1. Queries Firestore (db) to find the email matching the username.
+ * 2. Uses the found email and the provided password to authenticate via Firebase Auth (auth).
  */
-function sendSignInLink() {
-    const email = document.getElementById("user-email").value.trim(); 
+function login() {
+    const username = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value;
     const messageElement = document.getElementById("message");
+    
+    messageElement.innerHTML = "Verifying credentials...";
+    messageElement.style.color = "black"; 
 
-    if (!email) {
-        messageElement.innerHTML = "Please enter a valid email address.";
-        messageElement.style.color = "red";
-        return;
-    }
+    // Step 1: Find the email associated with the username in Firestore
+    db.collection("users")
+      .where("username", "==", username)
+      .limit(1)
+      .get()
+      .then(snapshot => {
+        if (snapshot.empty) {
+          messageElement.innerHTML = "Error: Invalid username or account not found.";
+          messageElement.style.color = "red";
+          return;
+        }
 
-    messageElement.innerHTML = "Sending magic link...";
-    messageElement.style.color = "black";
-
-    auth.sendSignInLinkToEmail(email, actionCodeSettings)
-        .then(() => {
-            // Save email locally for when the user returns from the email click
-            window.localStorage.setItem('emailForSignIn', email);
-            messageElement.innerHTML = `Success! Check your email (${email}) for the magic link.`;
-            messageElement.style.color = "green";
-        })
-        .catch((error) => {
-            messageElement.innerHTML = "Error sending link: " + error.message;
-            messageElement.style.color = "red";
-        });
-}
-
-
-/**
- * 2. Checks if the user is returning from a magic link click to complete the sign-in.
- */
-function handleSignInLink() {
-    // Check if the current URL contains the sign-in data
-    if (auth.isSignInWithEmailLink(window.location.href)) {
-        let email = window.localStorage.getItem('emailForSignIn');
+        // Get the email from the user document
+        const doc = snapshot.docs[0];
+        const email = doc.data().email;
         
-        // If email is missing, ask the user to input it
-        if (!email) {
-            email = window.prompt('Please provide your email for confirmation');
+        // Step 2: Authenticate using Firebase Auth (email + password)
+        return auth.signInWithEmailAndPassword(email, pass);
+      })
+      .then(() => {
+        // Success: Redirect the user
+        window.location.href = "requestordashboard.html"; 
+      })
+      .catch(error => {
+        // Handle errors (e.g., Firestore query failed, password was wrong)
+        let errorMessage = "Invalid username or password.";
+
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            errorMessage = "Invalid username or password.";
+        } else if (error.message) {
+             errorMessage = error.message;
         }
 
-        if (!email) {
-            alert("Sign-in failed. Email is required.");
-            return;
-        }
-
-        // Complete the sign-in process
-        auth.signInWithEmailLink(email, window.location.href)
-            .then(() => {
-                // Sign-in successful. Redirect to the dashboard
-                window.localStorage.removeItem('emailForSignIn');
-                window.location.href = "dashboard.html"; 
-            })
-            .catch((error) => {
-                alert("Sign-in error: " + error.message);
-                window.location.href = "login.html"; 
-            });
-    }
+        messageElement.innerHTML = "Error: " + errorMessage;
+        messageElement.style.color = "red";
+      });
 }
-
-// Execute the link handler on page load
-handleSignInLink();
 </script>
 
 </body>
 </html>
-
-
