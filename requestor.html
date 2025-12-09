@@ -127,15 +127,23 @@ buttonLogout {
     <p id="message"></p>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="firebase.js"></script>
+
 <script>
 // Check if user is signed in when the page loads
 auth.onAuthStateChanged(function(user) {
-    if (user) {
-        document.getElementById("user-email").innerText = user.email;
-    } else {
-        // Redirection on failure
-        window.location.href = "index.html"; 
-    }
+    if (user) {
+        // This is the correct way to identify the user
+        document.getElementById("user-email").innerText = user.email;
+        
+        // You can also hide the "Loading..." text until the user is confirmed
+        // (No further changes needed; the current code should eventually update the email.)
+    } else {
+        // Redirection on failure
+        window.location.href = "index.html"; 
+    }
 });
 
 function logout() {
