@@ -138,20 +138,16 @@ buttonLogout {
 // Check if user is signed in when the page loads
 auth.onAuthStateChanged(function(user) {
     if (user) {
-        // User is signed in. Display their email.
         document.getElementById("user-email").innerText = user.email;
-        // Optionally pre-fill the name field if you save it in Firebase Firestore
-        // For now, it stays blank.
     } else {
-        // No user is signed in. Redirect to login page.
-        window.location.href = "login.html";
+        // Redirection on failure
+        window.location.href = "index.html"; 
     }
 });
 
 function logout() {
     auth.signOut().then(() => {
         // Redirection happens automatically via onAuthStateChanged listener
-        // which sends the user back to login.html
     }).catch((error) => {
         alert("Error logging out: " + error.message);
     });
@@ -160,4 +156,3 @@ function logout() {
 
 </body>
 </html>
-
