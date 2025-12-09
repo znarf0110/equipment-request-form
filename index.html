@@ -76,58 +76,60 @@ button {
  * 2. Uses the found email and the provided password to authenticate via Firebase Auth (auth).
  */
 function login() {
-    const username = document.getElementById("username").value.trim();
-    const pass = document.getElementById("password").value;
-    const messageElement = document.getElementById("message");
-    
-    // Add basic validation for empty fields (good practice)
+    const username = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value;
+    const messageElement = document.getElementById("message");
+    
+    // Add basic validation check
     if (!username || !pass) {
         messageElement.innerHTML = "Error: Please fill in both fields.";
         messageElement.style.color = "red";
         return;
     }
-    
-    messageElement.innerHTML = "Verifying credentials...";
-    messageElement.style.color = "black"; 
 
-    // Step 1: Find the email associated with the username in Firestore
-    db.collection("users")
-      .where("username", "==", username)
-      .limit(1)
-      .get()
-      .then(snapshot => {
-        if (snapshot.empty) {
-          messageElement.innerHTML = "Error: Invalid username or account not found.";
-          messageElement.style.color = "red";
-          return;
-        }
+    messageElement.innerHTML = "Verifying credentials...";
+    messageElement.style.color = "black"; 
 
-        // Get the email from the user document
-        const doc = snapshot.docs[0];
-        const email = doc.data().email;
-        
-        // Step 2: Authenticate using Firebase Auth (email + password)
-        return auth.signInWithEmailAndPassword(email, pass);
-      })
-      .then(() => {
-        // Success: Redirect the user - NOW USING RELIABLE RELATIVE PATH
-        window.location.href = "./requestor.html"; 
-      })
-      .catch(error => { // <--- THIS IS THE CORRECT LOCATION FOR THE CATCH BLOCK
-        // Handle errors (e.g., Firestore query failed, password was wrong)
-        let errorMessage = "Invalid username or password.";
+    // Step 1: Find the email associated with the username in Firestore
+    db.collection("users")
+      .where("username", "==", username)
+      .limit(1)
+      .get()
+      .then(snapshot => {
+        if (snapshot.empty) {
+          messageElement.innerHTML = "Error: Invalid username or account not found.";
+          messageElement.style.color = "red";
+          // We throw an error here to skip the rest of the promise chain (the redirect)
+          throw new Error("UserNotFound"); 
+        }
 
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            errorMessage = "Invalid username or password.";
-        } else if (error.message) {
-             errorMessage = error.message;
-        }
+        const doc = snapshot.docs[0];
+        const email = doc.data().email;
+        
+        // Step 2: Authenticate using Firebase Auth
+        return auth.signInWithEmailAndPassword(email, pass);
+      })
+      .then(() => {
+        // SUCCESS: Redirect the user - THIS IS THE ONLY REDIRECT PATH
+        window.location.href = "./requestor.html"; 
+      })
+      .catch(error => {
+        // FAILURE: Display the error message and STOP execution here.
+        let errorMessage = "Invalid username or password.";
 
-        messageElement.innerHTML = "Error: " + errorMessage;
-        messageElement.style.color = "red";
-      });
+        if (error.message === "UserNotFound") {
+            errorMessage = "Invalid username or account not found.";
+        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            errorMessage = "Invalid username or password.";
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        messageElement.innerHTML = "Error: " + errorMessage;
+        messageElement.style.color = "red";
+      });
 }
 </script>
-
+	
 </body>
 </html>
