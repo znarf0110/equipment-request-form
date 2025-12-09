@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Firebase Login Page</title>
+<title>Firebase Passwordless Login</title>
 <style>
+/* Basic Styles for Clarity */
 body {
     font-family: Arial, sans-serif;
     background: #f0f0f0;
@@ -19,18 +20,16 @@ body {
     width: 400px;
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-h2 {
     text-align: center;
-    margin-bottom: 25px;
 }
+h2 { margin-bottom: 25px; }
 input {
-    width: calc(100% - 24px); /* Full width minus padding */
+    width: calc(100% - 24px); 
     padding: 12px;
     margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 6px;
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    box-sizing: border-box; 
 }
 button {
     width: 100%;
@@ -43,11 +42,7 @@ button {
     font-size: 16px;
     margin-top: 10px;
 }
-button:hover {
-    background: #0056b3;
-}
 #message {
-    text-align: center;
     margin-top: 15px;
     font-weight: bold;
 }
@@ -56,74 +51,92 @@ button:hover {
 <body>
 
 <div class="container">
-    <h2>Login</h2>
+    <h2>Login (Email Link)</h2>
 
-    <input type="text" required id="username" placeholder="Username">
-    <input id="password" type="password" placeholder="Password" required>
+    <input type="email" required id="user-email" placeholder="Your Email Address">
 
-    <button onclick="login()">Login</button>
+    <button onclick="sendSignInLink()">Login</button>
 
     <p id="message"></p>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
 <script src="firebase.js"></script>
 
 <script>
+// !!! IMPORTANT: Replace this URL with your actual deployed dashboard URL !!!
+const actionCodeSettings = {
+    // This must match the URL you authorized in the Firebase console settings.
+    url: 'http://127.0.0.1:5500/dashboard.html', 
+    handleCodeInApp: true,
+};
+
 /**
- * Handles the login process by finding the user's email in Firestore
- * and then authenticating that email and password with Firebase Auth.
+ * 1. Sends the email link to the user's provided email.
  */
-function login() {
-    const username = document.getElementById("username").value;
-    const pass = document.getElementById("password").value;
+function sendSignInLink() {
+    const email = document.getElementById("user-email").value.trim(); 
     const messageElement = document.getElementById("message");
-    
-    // Clear previous messages
-    messageElement.innerHTML = "Logging in...";
-    messageElement.style.color = "black"; 
 
-    // Step 1: Query Firestore to find the email corresponding to the username
-    db.collection("users")
-      .where("username", "==", username)
-      .limit(1) // Only expect one user
-      .get()
-      .then(snapshot => {
-        if (snapshot.empty) {
-          messageElement.innerHTML = "Error: Username not found or invalid.";
-          messageElement.style.color = "red";
-          return;
-        }
-
-        // Step 2: Get the email from the user document
-        const doc = snapshot.docs[0];
-        const email = doc.data().email;
-
-        // Step 3: Log in using Firebase Authentication (handles password verification securely)
-        return auth.signInWithEmailAndPassword(email, pass)
-          .then(() => {
-            // Success: Redirect the user
-            window.location.href = "dashboard.html"; 
-          });
-      })
-      .catch(error => {
-        // Handle errors from both the Firestore query and Auth sign-in
-        let errorMessage = "An unknown error occurred.";
-
-        // Customize the message based on Firebase error codes
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            errorMessage = "Invalid credentials. Please check your password.";
-        } else if (error.message) {
-             errorMessage = error.message;
-        }
-
-        messageElement.innerHTML = "Error: " + errorMessage;
+    if (!email) {
+        messageElement.innerHTML = "Please enter a valid email address.";
         messageElement.style.color = "red";
-      });
+        return;
+    }
+
+    messageElement.innerHTML = "Sending magic link...";
+    messageElement.style.color = "black";
+
+    auth.sendSignInLinkToEmail(email, actionCodeSettings)
+        .then(() => {
+            // Save email locally for when the user returns from the email click
+            window.localStorage.setItem('emailForSignIn', email);
+            messageElement.innerHTML = `Success! Check your email (${email}) for the magic link.`;
+            messageElement.style.color = "green";
+        })
+        .catch((error) => {
+            messageElement.innerHTML = "Error sending link: " + error.message;
+            messageElement.style.color = "red";
+        });
 }
+
+
+/**
+ * 2. Checks if the user is returning from a magic link click to complete the sign-in.
+ */
+function handleSignInLink() {
+    // Check if the current URL contains the sign-in data
+    if (auth.isSignInWithEmailLink(window.location.href)) {
+        let email = window.localStorage.getItem('emailForSignIn');
+        
+        // If email is missing, ask the user to input it
+        if (!email) {
+            email = window.prompt('Please provide your email for confirmation');
+        }
+
+        if (!email) {
+            alert("Sign-in failed. Email is required.");
+            return;
+        }
+
+        // Complete the sign-in process
+        auth.signInWithEmailLink(email, window.location.href)
+            .then(() => {
+                // Sign-in successful. Redirect to the dashboard
+                window.localStorage.removeItem('emailForSignIn');
+                window.location.href = "dashboard.html"; 
+            })
+            .catch((error) => {
+                alert("Sign-in error: " + error.message);
+                window.location.href = "login.html"; 
+            });
+    }
+}
+
+// Execute the link handler on page load
+handleSignInLink();
 </script>
 
 </body>
