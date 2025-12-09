@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Firebase Login Page</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f0f0f0;
+    display: flex;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+.container {
+    background: white;
+    padding: 30px;
+    width: 400px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+h2 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+input {
+    width: calc(100% - 24px); /* Full width minus padding */
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+button {
+    width: 100%;
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 10px;
+}
+button:hover {
+    background: #0056b3;
+}
+#message {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Login</h2>
+
+    <input type="text" required id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password" required>
+
+    <button onclick="login()">Login</button>
+
+    <p id="message"></p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+<script src="firebase.js"></script>
+
+<script>
+/**
+ * Handles the login process by finding the user's email in Firestore
+ * and then authenticating that email and password with Firebase Auth.
+ */
+function login() {
+    const username = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
+    const messageElement = document.getElementById("message");
+    
+    // Clear previous messages
+    messageElement.innerHTML = "Logging in...";
+    messageElement.style.color = "black"; 
+
+    // Step 1: Query Firestore to find the email corresponding to the username
+    db.collection("users")
+      .where("username", "==", username)
+      .limit(1) // Only expect one user
+      .get()
+      .then(snapshot => {
+        if (snapshot.empty) {
+          messageElement.innerHTML = "Error: Username not found or invalid.";
+          messageElement.style.color = "red";
+          return;
+        }
+
+        // Step 2: Get the email from the user document
+        const doc = snapshot.docs[0];
+        const email = doc.data().email;
+
+        // Step 3: Log in using Firebase Authentication (handles password verification securely)
+        return auth.signInWithEmailAndPassword(email, pass)
+          .then(() => {
+            // Success: Redirect the user
+            window.location.href = "dashboard.html"; 
+          });
+      })
+      .catch(error => {
+        // Handle errors from both the Firestore query and Auth sign-in
+        let errorMessage = "An unknown error occurred.";
+
+        // Customize the message based on Firebase error codes
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            errorMessage = "Invalid credentials. Please check your password.";
+        } else if (error.message) {
+             errorMessage = error.message;
+        }
+
+        messageElement.innerHTML = "Error: " + errorMessage;
+        messageElement.style.color = "red";
+      });
+}
+</script>
+
+</body>
+</html>
