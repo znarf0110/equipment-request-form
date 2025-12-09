@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Requestor Dashboard</title>
+<style>
+/* --- Dashboard Specific Styles --- */
+body {
+    font-family: Arial, sans-serif;
+    background: #f0f0f0;
+    display: flex;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+.container {
+    background: white;
+    padding: 30px;
+    width: 900px;
+    max-width: 90%; /* Added max-width for responsiveness */
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+h2 { 
+    text-align: center;
+    margin-bottom: 25px; 
+}
+
+/* --- FLEXBOX FOR NAME | DATE LAYOUT --- */
+.requestor-info {
+    display: flex;
+    gap: 20px; /* Space between the two field groups */
+    margin-bottom: 20px;
+    align-items: center;
+}
+.field-group {
+    flex: 1; /* Makes both groups take equal width */
+    display: flex;
+    align-items: center;
+}
+.field-group label {
+    margin-right: 10px;
+    font-weight: bold;
+    white-space: nowrap; /* Prevents label from wrapping */
+}
+.field-group input {
+    /* Reset width for Flexbox context */
+    width: 100%; 
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    margin: 0; /* Remove default margin */
+}
+
+/* --- User Info Display --- */
+.user-status {
+    text-align: right;
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 15px;
+}
+
+button {
+    width: 150px;
+    padding: 10px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: block; /* REQUIRED: Makes the button respect margin: auto */
+    margin: 20px auto 0; /* Centers horizontally (left/right auto) and sets top margin (20px) */
+
+}
+	
+buttonLogout {
+    width: 50px; /* Specific width for logout */
+    padding: 10px;
+    background: #dc3545; /* Red for Logout */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    float: right; /* Float to the right */
+    margin-top: 20px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+	
+<div class="container">
+		<buttonlogout onclick="logout()">Logout</buttonlogout>
+    <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
+
+    <h2>Requestor Dashboard</h2>
+
+    <div class="requestor-info" align="justify">
+        
+        <div class="field-group">
+            <label for="name">Name:</label>
+            <input type="text" required id="name" placeholder="Requestor Name">
+        </div>
+
+        <div class="field-group">
+            <label for="date">Date Needed:</label>
+          <input type="date" required id="date">
+        </div>
+    </div>
+	
+  <div class="requestor-info" align="justify">
+        
+        <div class="field-group">
+            <label for="department">Department:</label>
+            <input type="text" required id="Department" placeholder="Requestor Department">
+        </div>
+
+        <div class="field-group">
+            <label for="location">Location</label>
+          <input type="text" required id="Location">
+        </div>
+    </div>
+    
+    <button onclick="Submit()">Submit</button>
+    <div style="clear: both;"></div> 
+    <p id="message"></p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="firebase.js"></script>
+
+<script>
+// Check if user is signed in when the page loads
+auth.onAuthStateChanged(function(user) {
+    if (user) {
+        // User is signed in. Display their email.
+        document.getElementById("user-email").innerText = user.email;
+        // Optionally pre-fill the name field if you save it in Firebase Firestore
+        // For now, it stays blank.
+    } else {
+        // No user is signed in. Redirect to login page.
+        window.location.href = "login.html";
+    }
+});
+
+function logout() {
+    auth.signOut().then(() => {
+        // Redirection happens automatically via onAuthStateChanged listener
+        // which sends the user back to login.html
+    }).catch((error) => {
+        alert("Error logging out: " + error.message);
+    });
+}
+</script>
+
+</body>
+</html>
