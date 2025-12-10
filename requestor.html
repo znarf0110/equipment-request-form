@@ -131,59 +131,50 @@ buttonLogout {
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 <script src="firebase.js"></script>
 
-<div class="user-status">
-    Logged in as: <strong id="user-email">Awaiting Script...</strong>
-</div>
-
 <script>
-// Inside the script block, add a clear initial check
+// FIX 3: Consolidated and corrected the auth.onAuthStateChanged listener
+
 auth.onAuthStateChanged(function(user) {
-    if (user) {
-        // If user is found, change the default status text
+    if (user) {
+        // User is authenticated. Begin database lookup.
+        
+        // 1. Initial status update (optional, but shows script is running)
         document.getElementById("user-email").innerText = "Checking Database...";
-// Check if user is signed in when the page loads
-auth.onAuthStateChanged(function(user) {
-    if (user) {
-        // 1. Fetch the username from Firestore using the user's UID
-        db.collection("Accounts").doc(user.uid).get()
-            .then(doc => {
-                if (doc.exists) {
-                    const username = doc.data().username;
-                    // FIX: Show ONLY the username in the upper right corner
-                    document.getElementById("user-email").innerText = username; 
-                } else {
-                    // Fallback to email if Firestore document is missing
-                    document.getElementById("user-email").innerText = user.email;
-                    console.log("No Firestore document found for user.");
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching username:", error);
-                document.getElementById("user-email").innerText = user.email; // Show email on lookup failure
-            });
-    } else {
-        // No user is signed in. Redirect to login page.
-        window.location.href = "index.html"; 
-    }
+        
+        // 2. Fetch the username from Firestore using the user's UID and the correct collection name
+        db.collection("Accounts").doc(user.uid).get()
+            .then(doc => {
+                if (doc.exists) {
+                    const username = doc.data().username;
+                    // FINAL FIX: Show ONLY the username
+                    document.getElementById("user-email").innerText = username; 
+                } else {
+                    // Fallback if Firestore document is missing
+                    document.getElementById("user-email").innerText = user.email;
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching username:", error);
+                document.getElementById("user-email").innerText = user.email; // Show email on lookup failure
+            });
+    } else {
+        // User is not logged in. Redirect to login page.
+        window.location.href = "index.html"; 
+    }
 });
 
 function logout() {
-    auth.signOut().then(() => {
-        // Redirection happens automatically via onAuthStateChanged listener
-    }).catch((error) => {
-        alert("Error logging out: " + error.message);
-    });
+    auth.signOut().then(() => {
+        // Redirection happens automatically
+    }).catch((error) => {
+        alert("Error logging out: " + error.message);
+    });
 }
 
 // Placeholder for the form submission logic
 function Submit() {
-    alert("Form submission logic goes here!");
-    // You will use db.collection('requests').add({...}) here
+    alert("Submit function is ready to be written!");
 }
 </script>
-
 </body>
 </html>
-
-
-
