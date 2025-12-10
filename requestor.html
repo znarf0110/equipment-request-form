@@ -134,9 +134,8 @@ buttonLogout {
 <script>
 auth.onAuthStateChanged(function(user) {
     if (user) {
-        // --- ADDED FIX: Immediately display the email while waiting for username lookup
+        // FIX 1: Set email immediately to replace "Loading..." while waiting for database lookup.
         document.getElementById("user-email").innerText = user.email;
-        // --- END ADDED FIX
         
         // 1. Fetch the username from Firestore...
         db.collection("Accounts").doc(user.uid).get()
@@ -146,25 +145,34 @@ auth.onAuthStateChanged(function(user) {
                     // Final Success: Show ONLY the username
                     document.getElementById("user-email").innerText = username; 
                 } else {
-                    // Fallback to email is already handled above if doc is missing
                     console.log("No Firestore document found for user.");
                 }
             })
             .catch(error => {
-                // If there's a security rule or network error during lookup, the email will remain displayed.
                 console.error("Error fetching username:", error);
+                // On lookup error, keep the email (set above)
             });
     } else {
-        // User is not logged in.
+        // User is not logged in. Redirect to login page.
         window.location.href = "index.html"; 
     }
-});
+}); // <--- NO EXTRA BRACE HERE. The function definition ends properly.
+
+function logout() {
+    auth.signOut().then(() => {
+        // Redirection happens automatically via onAuthStateChanged listener
+    }).catch((error) => {
+        alert("Error logging out: " + error.message);
+    });
 }
 
 // Placeholder for the form submission logic
 function Submit() {
-    alert("Submit function is ready to be written!");
+    alert("Submit function is ready to be written!");
 }
 </script>
+
+	
 </body>
 </html>
+
