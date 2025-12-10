@@ -1,6 +1,6 @@
 // Paste your Firebase config here
 const firebaseConfig = {
-  apiKey: "AIzaSyDmsWOiUTgaMg7VkIlIFMUBqqekb8p0ngg",
+  apiKey: "AIzaSyD5kIqYIIMQmBEKp66-EtG3wirpBidwxoU",
   authDomain: "user-database-f8129.firebaseapp.com",
   projectId: "user-database-f8129",
   storageBucket: "user-database-f8129.firebasestorage.app",
@@ -12,3 +12,4 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
