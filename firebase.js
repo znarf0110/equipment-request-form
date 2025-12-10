@@ -1,17 +1,16 @@
 // firebase.js content (Global Style - Matches your login/dashboard code)
 
-// Your web app's Firebase configuration (using const/var for global scope)
+// Your web app's Firebase configuration
 const firebaseConfig = {
-    // NOTE: I am using the API Key from your screenshot. Ensure this is correct.
-    apiKey: "AIzaSyCARoTyrO8zuIh0A1oPG6tMpesn_lR9S3U",
-    authDomain: "user-database-f8129.firebaseapp.com",
-    projectId: "user-database-f8129",
-    storageBucket: "user-database-f8129.firebasestorage.app",
-    messagingSenderId: "265686623860",
-    appId: "1:265686623860:web:7025d13e3ec82bd0a51321"
+    apiKey: "AIzaSyBv0Z-xF1-M3Hfe078dT6tpOj096IusQWU",
+    authDomain: "accounts-database-5b52b.firebaseapp.com",
+    projectId: "accounts-database-5b52b",
+    storageBucket: "accounts-database-5b52b.firebasestorage.app",
+    messagingSenderId: "889753057532",
+    appId: "1:889753057532:web:531b7a357dc4e9aa93bf79"
 };
 
-// Initialize Firebase using the global 'firebase' object (which is defined by the SDK links in your HTML)
+// Initialize Firebase using the global 'firebase' object (defined by SDK links in your HTML)
 firebase.initializeApp(firebaseConfig);
 
 // Define global service objects accessible by your login/dashboard functions
