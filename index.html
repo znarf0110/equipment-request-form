@@ -71,61 +71,67 @@ button {
 
 <script>
 /**
- * Corrected login function using "Accounts" collection.
+ * Handles the login process:
+ * 1. Queries Firestore (db) to find the email matching the username.
+ * 2. Uses the found email and the provided password to authenticate via Firebase Auth (auth).
  */
 function login() {
-    const username = document.getElementById("username").value.trim();
-    const pass = document.getElementById("password").value;
-    const messageElement = document.getElementById("message");
-    
-    // Basic validation check
+    const username = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value;
+    const messageElement = document.getElementById("message");
+    
+    // Input validation check
     if (!username || !pass) {
         messageElement.innerHTML = "Error: Please fill in both fields.";
         messageElement.style.color = "red";
         return;
     }
 
-    messageElement.innerHTML = "Verifying credentials...";
-    messageElement.style.color = "black"; 
+    messageElement.innerHTML = "Verifying credentials...";
+    messageElement.style.color = "black"; 
 
-    // FIX APPLIED HERE: Changed collection name from "users" to "Accounts"
-    db.collection("Accounts")
-      .where("username", "==", username)
-      .limit(1)
-      .get()
-      .then(snapshot => {
-        if (snapshot.empty) {
-          messageElement.innerHTML = "Error: Invalid username or account not found.";
-          messageElement.style.color = "red";
-          return;
-        }
+    // Step 1: Find the email associated with the username in Firestore (using the correct "Accounts" collection)
+    db.collection("Accounts") 
+      .where("username", "==", username)
+      .limit(1)
+      .get()
+      .then(snapshot => {
+        if (snapshot.empty) {
+          messageElement.innerHTML = "Error: Invalid username or account not found.";
+          messageElement.style.color = "red";
+          throw new Error("UserNotFound"); // Throw error to jump to the catch block
+        }
 
-        // Get the email from the user document
-        const doc = snapshot.docs[0];
-        const email = doc.data().email;
-        
-        // Step 2: Authenticate using Firebase Auth (email + password)
-        return auth.signInWithEmailAndPassword(email, pass);
-      })
-      .then(() => {
-        // Success: Redirect the user - USING RELIABLE RELATIVE PATH
-        window.location.href = "./requestor.html"; 
-      })
-      .catch(error => {
-        // Handle errors (will now show 'Invalid username or password' on auth failure)
-        let errorMessage = "Invalid username or password.";
+        // Get the email from the user document
+        const doc = snapshot.docs[0];
+        const email = doc.data().email;
+        
+        // Step 2: Authenticate using Firebase Auth (email + password)
+        return auth.signInWithEmailAndPassword(email, pass);
+      })
+      .then(() => {
+        // SUCCESS: Redirect the user - USING RELIABLE RELATIVE PATH
+        window.location.href = "./requestor.html"; 
+      })
+      .catch(error => {
+        // FAILURE: Display the error message - Execution STAYS on the login page
+        let errorMessage = "Invalid username or password.";
+        
+        // Custom error handling for user not found in Firestore
+        if (error.message === "UserNotFound") {
+            errorMessage = "Invalid username or account not found.";
+        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            errorMessage = "Invalid username or password.";
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
 
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            errorMessage = "Invalid username or password.";
-        } else if (error.message) {
-             errorMessage = error.message;
-        }
-
-        messageElement.innerHTML = "Error: " + errorMessage;
-        messageElement.style.color = "red";
-      });
+        messageElement.innerHTML = "Error: " + errorMessage;
+        messageElement.style.color = "red";
+      });
 }
 </script>
 	
 </body>
 </html>
+
