@@ -135,29 +135,44 @@ buttonLogout {
 // Check if user is signed in when the page loads
 auth.onAuthStateChanged(function(user) {
     if (user) {
-        // This is the correct way to identify the user
-        document.getElementById("user-email").innerText = user.email;
-        
-        // You can also hide the "Loading..." text until the user is confirmed
-        // (No further changes needed; the current code should eventually update the email.)
+        // 1. Fetch the username from Firestore using the user's UID
+        db.collection("Accounts").doc(user.uid).get()
+            .then(doc => {
+                if (doc.exists) {
+                    const username = doc.data().username;
+                    // FIX: Show ONLY the username in the upper right corner
+                    document.getElementById("user-email").innerText = username; 
+                } else {
+                    // Fallback to email if Firestore document is missing
+                    document.getElementById("user-email").innerText = user.email;
+                    console.log("No Firestore document found for user.");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching username:", error);
+                document.getElementById("user-email").innerText = user.email; // Show email on lookup failure
+            });
     } else {
-        // Redirection on failure
+        // No user is signed in. Redirect to login page.
         window.location.href = "index.html"; 
     }
 });
 
 function logout() {
-    auth.signOut().then(() => {
-        // Redirection happens automatically
-    }).catch((error) => {
-        alert("Error logging out: " + error.message);
-    });
+    auth.signOut().then(() => {
+        // Redirection happens automatically via onAuthStateChanged listener
+    }).catch((error) => {
+        alert("Error logging out: " + error.message);
+    });
 }
-// You will need to define the function Submit() here to avoid errors
+
+// Placeholder for the form submission logic
 function Submit() {
-    alert("Submit function is ready to be written!");
+    alert("Form submission logic goes here!");
+    // You will use db.collection('requests').add({...}) here
 }
 </script>
 
 </body>
 </html>
+
