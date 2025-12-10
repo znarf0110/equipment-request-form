@@ -76,25 +76,27 @@ button {
 
 }
 	
-buttonLogout {
-    width: 50px; /* Specific width for logout */
+.logout-btn {
+    width: 80px; 
     padding: 10px;
-    background: #dc3545; /* Red for Logout */
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    float: right; /* Float to the right */
-    margin-top: 20px;
+    background: #dc3545; 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-size: 14px; 
+    float: right; 
+    margin-top: 20px; 
     text-align: center;
 }
+
+	
 </style>
 </head>
 <body>
 	
 <div class="container">
-	<buttonlogout onclick="logout()">Logout</buttonlogout> 
+	<button class="logout-btn" onclick="logout()">Logout</button>
     <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
 
     <h2>Requestor Dashboard</h2>
@@ -173,7 +175,3 @@ function Submit() {
 	
 </body>
 </html>
-
-
-
-
