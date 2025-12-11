@@ -21,7 +21,6 @@ button { width:150px; padding:10px; background:#dc3545; color:white; border:none
 <div class="container">
   <button class="logout-btn" onclick="logout()">Logout</button>
   <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
-
   <h2>Requestor Dashboard</h2>
 
   <div class="requestor-info">
@@ -48,7 +47,6 @@ button { width:150px; padding:10px; background:#dc3545; color:white; border:none
         <option value="Operations">Operations</option>
       </select>
     </div>
-
     <div class="field-group">
       <label for="location">Location:</label>
       <input type="text" id="location" placeholder="Location">
@@ -65,13 +63,13 @@ button { width:150px; padding:10px; background:#dc3545; color:white; border:none
 <script src="firebase.js"></script>
 
 <script>
-auth.onAuthStateChanged(async user => {
+auth.onAuthStateChanged(async user=>{
     if(!user) return window.location.href="index.html";
     const doc = await db.collection("Accounts").doc(user.uid).get();
     const data = doc.data();
-    if(!data || data.role !== "requestor") return window.location.href="index.html";
+    if(!data || data.role!=="requestor") return window.location.href="index.html";
     document.getElementById("user-email").innerText = data.username || user.email;
-    if(data.department) document.getElementById("department").value = data.department;
+    if(data.department) document.getElementById("department").value=data.department;
 });
 
 function logout(){ auth.signOut(); window.location.href="index.html"; }
@@ -82,9 +80,9 @@ function submitRequest() {
     const department = document.getElementById("department").value;
     const location = document.getElementById("location").value.trim();
     const msg = document.getElementById("message");
-    if(!name || !dateNeeded || !department || !location){
-        msg.innerText="All fields are required."; msg.style.color="red"; return;
-    }
+
+    if(!name||!dateNeeded||!department||!location){ msg.innerText="All fields required"; msg.style.color="red"; return; }
+
     const user = auth.currentUser;
     db.collection("Accounts").doc(user.uid).get().then(doc=>{
         const username = doc.data().username;
@@ -93,7 +91,8 @@ function submitRequest() {
             submittedBy: username,
             userId:user.uid,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            status:{approver1:"Pending",approver2:"Pending",final:"Pending"}
+            status:{approver1:"Pending",approver2:"Pending",final:"Pending"},
+            currentApprover:"Manager"
         }).then(()=>{
             msg.innerText="Request submitted successfully!"; msg.style.color="green";
             document.getElementById("name").value="";
