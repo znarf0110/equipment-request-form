@@ -12,7 +12,8 @@ h2 { text-align:center; margin-bottom:20px; }
 table { width:100%; border-collapse:collapse; margin-top:40px; }
 th, td { border:1px solid #ccc; padding:10px; text-align:left; }
 th { background:#007bff; color:white; }
-tr:nth-child(even) { background:#f9f9f9; }
+tr:nth-child(even){ background:#f9f9f9; }
+button.approve-btn { padding:5px 10px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -20,21 +21,13 @@ tr:nth-child(even) { background:#f9f9f9; }
 <div class="container">
   <button class="logout-btn" onclick="logout()">Logout</button>
   <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
-
   <h2>Approver Dashboard</h2>
 
   <table>
     <thead>
       <tr>
-        <th>Date Requested</th>
-        <th>Name</th>
-        <th>Date Needed</th>
-        <th>Department</th>
-        <th>Location</th>
-        <th>Submitted By</th>
-        <th>Approver 1</th>
-        <th>Approver 2</th>
-        <th>Final</th>
+        <th>Date Requested</th><th>Name</th><th>Date Needed</th><th>Department</th>
+        <th>Location</th><th>Submitted By</th><th>Approver1</th><th>Approver2</th><th>Final</th><th>Action</th>
       </tr>
     </thead>
     <tbody id="requests-tbody"></tbody>
@@ -47,38 +40,50 @@ tr:nth-child(even) { background:#f9f9f9; }
 <script src="firebase.js"></script>
 
 <script>
-auth.onAuthStateChanged(async user => {
+let currentPosition="";
+auth.onAuthStateChanged(async user=>{
     if(!user) return window.location.href="index.html";
     const doc = await db.collection("Accounts").doc(user.uid).get();
     const data = doc.data();
-    if(!data || data.role !== "approver") return window.location.href="index.html";
+    if(!data || data.role!=="approver") return window.location.href="index.html";
     document.getElementById("user-email").innerText = data.username || user.email;
-
-    const approverDept = data.department; // now unified
-    db.collection("Requests")
-      .where("department","==",approverDept)
-      .orderBy("timestamp","desc")
-      .onSnapshot(snapshot=>{
-          const tbody = document.getElementById("requests-tbody");
-          tbody.innerHTML = "";
-          snapshot.forEach(doc=>{
-              const r = doc.data();
-              const timestamp = r.timestamp ? r.timestamp.toDate().toLocaleString() : "";
-              tbody.innerHTML += `
-                  <tr>
-                      <td>${timestamp}</td>
-                      <td>${r.name}</td>
-                      <td>${r.dateNeeded}</td>
-                      <td>${r.department}</td>
-                      <td>${r.location}</td>
-                      <td>${r.submittedBy}</td>
-                      <td>${r.status.approver1}</td>
-                      <td>${r.status.approver2}</td>
-                      <td>${r.status.final}</td>
-                  </tr>`;
-          });
-      });
+    currentPosition = data.position;
+    loadRequests();
 });
+
+function loadRequests() {
+    db.collection("Requests").where("currentApprover","==",currentPosition).orderBy("timestamp","desc")
+    .onSnapshot(snapshot=>{
+        const tbody = document.getElementById("requests-tbody");
+        tbody.innerHTML="";
+        snapshot.forEach(doc=>{
+            const r = doc.data();
+            const timestamp = r.timestamp?r.timestamp.toDate().toLocaleString():"";
+            tbody.innerHTML+=`<tr>
+                <td>${timestamp}</td>
+                <td>${r.name}</td>
+                <td>${r.dateNeeded}</td>
+                <td>${r.department}</td>
+                <td>${r.location}</td>
+                <td>${r.submittedBy}</td>
+                <td>${r.status.approver1}</td>
+                <td>${r.status.approver2}</td>
+                <td>${r.status.final}</td>
+                <td><button class="approve-btn" onclick="approveRequest('${doc.id}')">Approve</button></td>
+            </tr>`;
+        });
+    });
+}
+
+function approveRequest(requestId) {
+    const ref = db.collection("Requests").doc(requestId);
+    ref.get().then(doc=>{
+        const r = doc.data();
+        if(currentPosition==="Manager") ref.update({ "status.approver1":"Approved", currentApprover:"HR" });
+        else if(currentPosition==="HR") ref.update({ "status.approver2":"Approved", currentApprover:"Admin" });
+        else if(currentPosition==="Admin") ref.update({ "status.final":"Approved", currentApprover:"" });
+    });
+}
 
 function logout(){ auth.signOut(); window.location.href="index.html"; }
 </script>
