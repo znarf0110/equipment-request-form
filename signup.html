@@ -69,7 +69,7 @@ button {
 <script src="firebase.js"></script>
 
 <script>
-function signupUser() {
+async function signupUser() {
     const username = document.getElementById("username").value.trim();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
@@ -81,34 +81,64 @@ function signupUser() {
         return;
     }
 
-    msg.innerHTML = "Creating user...";
+    msg.innerHTML = "Checking for duplicates...";
     msg.style.color = "black";
 
-    // Step 1: Create Firebase Auth user
-    auth.createUserWithEmailAndPassword(email, password)
-        .then(userCredential => {
-            const uid = userCredential.user.uid;
+    try {
+        // Step 1: Check for existing username
+        const usernameQuery = await db.collection("Accounts")
+            .where("username", "==", username)
+            .limit(1)
+            .get();
 
-            // Step 2: Add to Firestore
-            return db.collection("Accounts").doc(uid).set({
-                username: username,
-                email: email
-            });
-        })
-        .then(() => {
-            msg.innerHTML = "User created successfully!";
-            msg.style.color = "green";
-            document.getElementById("username").value = "";
-            document.getElementById("email").value = "";
-            document.getElementById("password").value = "";
-        })
-        .catch(error => {
-            console.error(error);
-            msg.innerHTML = error.message;
+        if (!usernameQuery.empty) {
+            msg.innerHTML = "Username already exists.";
             msg.style.color = "red";
+            return;
+        }
+
+        // Step 2: Check for existing email
+        const emailQuery = await db.collection("Accounts")
+            .where("email", "==", email)
+            .limit(1)
+            .get();
+
+        if (!emailQuery.empty) {
+            msg.innerHTML = "Email already exists.";
+            msg.style.color = "red";
+            return;
+        }
+
+        msg.innerHTML = "Creating user...";
+        msg.style.color = "black";
+
+        // Step 3: Create Firebase Auth user
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const uid = userCredential.user.uid;
+
+        // Step 4: Add to Firestore
+        await db.collection("Accounts").doc(uid).set({
+            username: username,
+            email: email
         });
+
+        msg.innerHTML = "User created successfully!";
+        msg.style.color = "green";
+
+        // Clear inputs
+        document.getElementById("username").value = "";
+        document.getElementById("email").value = "";
+        document.getElementById("password").value = "";
+
+    } catch (error) {
+        console.error(error);
+        msg.innerHTML = error.message;
+        msg.style.color = "red";
+    }
 }
 </script>
 
+
 </body>
 </html>
+
