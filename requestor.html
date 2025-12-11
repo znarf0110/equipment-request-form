@@ -135,6 +135,15 @@ button {
 <script src="firebase.js"></script>
 	
 <script>
+// Redirect if user is not signed in
+  auth.onAuthStateChanged(user => {
+      if (!user) {
+          // User not signed in → redirect to login page
+          window.location.href = "index.html";
+      }
+  });
+
+	
 auth.onAuthStateChanged(function(user) {
     if (user) {
         document.getElementById("user-email").innerText = user.email;
@@ -171,6 +180,7 @@ function logout() {
 	
 </body>
 </html>
+
 
 
 
