@@ -4,37 +4,113 @@
 <meta charset="UTF-8">
 <title>Admin Dashboard</title>
 <style>
-body { font-family: Arial; background:#f0f0f0; display:flex; justify-content:center; align-items:flex-start; padding-top:50px; margin:0; }
-.container { background:white; padding:30px; border-radius:10px; width:900px; max-width:95%; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
-h2 { text-align:center; margin-bottom:20px; }
-table { width:100%; border-collapse: collapse; margin-top:20px; }
-th, td { padding:10px; border:1px solid #ccc; text-align:left; }
-.user-status { text-align:right; font-size:0.9em; color:#555; }
-.logout-btn { width:80px; padding:10px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; float:right; margin-top:0; }
+body { 
+	font-family: Arial; 
+	background:#f0f0f0; 
+	margin:0; 
+	display:flex; 
+	justify-content:center; 
+	padding:20px 0; 
+	}
+	
+.container { 
+	width:95%; 
+	max-width:1400px; 
+	background:white; 
+	padding:20px; 
+	border-radius:10px; 
+	box-shadow:0 5px 15px rgba(0,0,0,0.1); 
+	}
+	
+h2 { 
+	text-align:center; 
+	margin-bottom:20px; 
+	}
+	
+.user-status { 
+	text-align:right; 
+	font-size:0.9em; 
+	color:#555; 
+	margin-bottom:10px; 
+	}
+	
+.logout-btn { 
+	width:80px; 
+	padding:8px; 
+	background:#dc3545; 
+	color:white; 
+	border:none; 
+	border-radius:6px; 
+	cursor:pointer; 
+	font-size:14px; 
+	float:right; 
+	margin-top:10px; 
+	}
+	
+table { 
+	width:100%; 
+	border-collapse:collapse; 
+	margin-top:40px; 
+	}
+	
+th, td { 
+	border:1px solid #ccc; 
+	padding:10px; 
+	text-align:left; 
+	}
+	
+th { 
+	background:#007bff; 
+	color:white; 
+	}
+	
+tr:nth-child(even){ 
+	background:#f9f9f9; 
+	}
+	
+button.approve, button.reject { 
+	padding:5px 10px; 
+	border:none; 
+	border-radius:4px; 
+	cursor:pointer; 
+	color:white; 
+	margin-right:5px;
+	}
+	
+button.approve { 
+	background:green; 
+	}
+	
+button.reject { 
+	background:red; 
+	}
+	
 </style>
 </head>
 <body>
-
 <div class="container">
-    <button class="logout-btn" onclick="logout()">Logout</button>
-    <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
+  <button class="logout-btn" onclick="logout()">Logout</button>
+  <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
 
-    <h2>Admin Dashboard - All Requests</h2>
+  <h2>Admin Dashboard</h2>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Date Requested</th>
-                <th>Requestor</th>
-                <th>Department</th>
-                <th>Location</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody id="requests-body">
-            <tr><td colspan="5">Loading requests...</td></tr>
-        </tbody>
-    </table>
+  <table>
+    <thead>
+      <tr>
+        <th>Date Requested</th>
+        <th>Name</th>
+        <th>Date Needed</th>
+        <th>Department</th>
+        <th>Location</th>
+        <th>Submitted By</th>
+        <th>Approver 1</th>
+        <th>Approver 2</th>
+        <th>Final</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="requests-tbody"></tbody>
+  </table>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
@@ -43,75 +119,59 @@ th, td { padding:10px; border:1px solid #ccc; text-align:left; }
 <script src="firebase.js"></script>
 
 <script>
-// --- Auth & Role Protection ---
-auth.onAuthStateChanged(async user => {
-    if(!user) {
-        // Not signed in
-        window.location.href = "index.html";
-        return;
-    }
+// ---------------- AUTH CHECK ----------------
+auth.onAuthStateChanged(async user=>{
+    if(!user) return window.location.href="index.html";
+    const doc = await db.collection("Accounts").doc(user.uid).get();
+    const data = doc.data();
+    if(!data || data.role!=="admin") return window.location.href="index.html";
+    document.getElementById("user-email").innerText = data.username || user.email;
 
-    // Show email temporarily
-    document.getElementById("user-email").innerText = user.email;
-
-    // Fetch user role
-    const userDoc = await db.collection("Accounts").doc(user.uid).get();
-    const userData = userDoc.data();
-
-    if(!userData || userData.role !== "admin") {
-        alert("Access denied. Admins only.");
-        auth.signOut();
-        window.location.href = "index.html";
-        return;
-    }
-
-    // Show username instead of email
-    document.getElementById("user-email").innerText = userData.username;
-
-    // Load all requests
-    loadRequests();
+    // Fetch all requests
+    db.collection("Requests").orderBy("timestamp","desc").onSnapshot(snapshot=>{
+        const tbody=document.getElementById("requests-tbody");
+        tbody.innerHTML="";
+        snapshot.forEach(doc=>{
+            const r = doc.data();
+            const ts = r.timestamp?r.timestamp.toDate().toLocaleString():"";
+            tbody.innerHTML+=`
+            <tr id="${doc.id}">
+                <td>${ts}</td>
+                <td>${r.name}</td>
+                <td>${r.dateNeeded}</td>
+                <td>${r.department}</td>
+                <td>${r.location}</td>
+                <td>${r.submittedBy}</td>
+                <td>${r.status.approver1}</td>
+                <td>${r.status.approver2}</td>
+                <td>${r.status.final}</td>
+                <td>
+                    <button class="approve" onclick="finalApprove('${doc.id}')">Approve</button>
+                    <button class="reject" onclick="finalReject('${doc.id}')">Reject</button>
+                </td>
+            </tr>`;
+        });
+    });
 });
 
-// --- Load all requests ---
-function loadRequests() {
-    const tbody = document.getElementById("requests-body");
-    tbody.innerHTML = "";
+// ---------------- LOGOUT ----------------
+function logout(){ auth.signOut(); window.location.href="index.html"; }
 
-    db.collection("Requests")
-      .orderBy("timestamp", "desc")
-      .get()
-      .then(snapshot => {
-          if(snapshot.empty){
-              tbody.innerHTML = "<tr><td colspan='5'>No requests found.</td></tr>";
-              return;
-          }
-
-          snapshot.forEach(doc => {
-              const data = doc.data();
-              const date = data.timestamp?.toDate().toLocaleString() || "";
-              const statusText = data.status ? Object.values(data.status).join(", ") : "Pending";
-
-              const row = `<tr>
-                  <td>${date}</td>
-                  <td>${data.submittedBy}</td>
-                  <td>${data.department}</td>
-                  <td>${data.location}</td>
-                  <td>${statusText}</td>
-              </tr>`;
-              tbody.innerHTML += row;
-          });
-      })
-      .catch(error => {
-          console.error("Error loading requests:", error);
-          tbody.innerHTML = "<tr><td colspan='5'>Error loading requests.</td></tr>";
-      });
+// ---------------- FINAL APPROVE ----------------
+function finalApprove(docId){
+    db.collection("Requests").doc(docId).update({
+        "status.final":"Approved"
+    }).then(()=>{ alert("Request approved!"); })
+      .catch(e=>{ console.error(e); alert("Error approving request."); });
 }
 
-// --- Logout function ---
-function logout() {
-    auth.signOut().catch(error => alert("Error logging out: " + error.message));
+// ---------------- FINAL REJECT ----------------
+function finalReject(docId){
+    db.collection("Requests").doc(docId).update({
+        "status.final":"Rejected"
+    }).then(()=>{ alert("Request rejected!"); })
+      .catch(e=>{ console.error(e); alert("Error rejecting request."); });
 }
 </script>
-
 </body>
 </html>
