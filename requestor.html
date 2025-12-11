@@ -186,12 +186,11 @@ function submitRequest() {
 
     db.collection("Accounts").doc(user.uid).get().then(doc => {
         const username = doc.data().username;
-        const dept = doc.data().department;
 
         db.collection("Requests").add({
             name,
             dateNeeded,
-            department: dept,
+            department,  // <-- CORRECT
             location,
             submittedBy: username,
             userId: user.uid,
@@ -207,6 +206,7 @@ function submitRequest() {
         });
     });
 }
+
 </script>
 </body>
 </html>
