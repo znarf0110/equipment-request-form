@@ -20,14 +20,15 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
     <input type="email" id="email" placeholder="Email" required>
     <input type="password" id="password" placeholder="Password" required>
     
-    <select id="role" required>
+    <select id="role" required onchange="toggleDepartment()">
         <option value="">Select Role</option>
         <option value="requestor">Requestor</option>
         <option value="approver">Approver</option>
         <option value="admin">Admin</option>
     </select>
-
-    <select id="department" required>
+    
+    <!-- Department dropdown for requestor and approver -->
+    <select id="department" style="display:none;">
         <option value="">Select Department</option>
         <option value="Sales">Sales</option>
         <option value="Marketing">Marketing</option>
@@ -47,7 +48,20 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
 <script src="firebase.js"></script>
 
 <script>
-function signupUser() {
+function toggleDepartment() {
+    const role = document.getElementById("role").value;
+    const deptSelect = document.getElementById("department");
+    if(role === "requestor" || role === "approver") {
+        deptSelect.style.display = "block";
+        deptSelect.required = true;
+    } else {
+        deptSelect.style.display = "none";
+        deptSelect.required = false;
+        deptSelect.value = "";
+    }
+}
+
+async function signupUser() {
     const username = document.getElementById("username").value.trim();
     const name = document.getElementById("name").value.trim();
     const email = document.getElementById("email").value.trim();
@@ -56,8 +70,14 @@ function signupUser() {
     const department = document.getElementById("department").value;
     const msg = document.getElementById("message");
 
-    if(!username || !name || !email || !password || !role || !department) {
+    if(!username || !name || !email || !password || !role) {
         msg.innerText = "Please fill in all required fields.";
+        msg.style.color = "red";
+        return;
+    }
+
+    if((role === "requestor" || role === "approver") && !department) {
+        msg.innerText = "Please select a department.";
         msg.style.color = "red";
         return;
     }
@@ -65,41 +85,52 @@ function signupUser() {
     msg.innerText = "Checking username/email...";
     msg.style.color = "black";
 
-    db.collection("Accounts")
-      .where("username","==",username).get()
-      .then(snapshot => {
-          if(!snapshot.empty) throw { code:"username-exists" };
-          return db.collection("Accounts").where("email","==",email).get();
-      })
-      .then(snapshot => {
-          if(!snapshot.empty) throw { code:"email-exists" };
-          return auth.createUserWithEmailAndPassword(email, password);
-      })
-      .then(userCredential => {
-          const userId = userCredential.user.uid;
-          return db.collection("Accounts").doc(userId).set({
-              username,
-              name,
-              email,
-              role,
-              department,       // unified department field
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-      })
-      .then(() => {
-          msg.innerText = "Account created successfully!";
-          msg.style.color = "green";
-          setTimeout(()=>window.location.href="index.html",1500);
-      })
-      .catch(error => {
-          let text = "Error creating account.";
-          if(error.code==="username-exists") text="Username already exists.";
-          if(error.code==="email-exists") text="Email already registered.";
-          if(error.code.startsWith("auth/")) text = error.message;
-          msg.innerText = text;
-          msg.style.color="red";
-      });
+    try {
+        // Check duplicate username
+        const usernameSnap = await db.collection("Accounts").where("username", "==", username).get();
+        if(!usernameSnap.empty) throw { code: "username-exists" };
+
+        // Check duplicate email
+        const emailSnap = await db.collection("Accounts").where("email", "==", email).get();
+        if(!emailSnap.empty) throw { code: "email-exists" };
+
+        // Create user
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userId = userCredential.user.uid;
+
+        // Prepare account data
+        let accountData = {
+            username,
+            name,
+            email,
+            role,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if(role === "requestor") {
+            accountData.department = department; // requestor department
+        } else if(role === "approver") {
+            accountData.departmentApprover = department; // approver department
+        }
+
+        // Save to Firestore
+        await db.collection("Accounts").doc(userId).set(accountData);
+
+        msg.innerText = "Account created successfully!";
+        msg.style.color = "green";
+        setTimeout(()=>window.location.href="index.html", 1500);
+
+    } catch(error) {
+        console.error(error);
+        let text = "Error creating account.";
+        if(error.code==="username-exists") text="Username already exists.";
+        else if(error.code==="email-exists") text="Email already registered.";
+        else if(error.code.startsWith("auth/")) text = error.message;
+        msg.innerText = text;
+        msg.style.color="red";
+    }
 }
 </script>
+
 </body>
 </html>
