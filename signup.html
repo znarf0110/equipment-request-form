@@ -63,12 +63,13 @@ function toggleDepartment() {
         deptSelect.style.display = "block";
         deptSelect.required = true;
         posSelect.style.display = "none";
+        posSelect.required = false;
     } else if(role === "approver") {
         deptSelect.style.display = "block";
         deptSelect.required = true;
         posSelect.style.display = "block";
         posSelect.required = true;
-    } else {
+    } else { // admin
         deptSelect.style.display = "none";
         deptSelect.required = false;
         deptSelect.value = "";
