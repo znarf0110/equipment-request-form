@@ -124,6 +124,7 @@ button {
         <option value="Operations">Operations</option>
       </select>
     </div>
+
     <div class="field-group">
       <label for="location">Location:</label>
       <input type="text" id="location" placeholder="Location">
@@ -140,21 +141,18 @@ button {
 <script src="firebase.js"></script>
 
 <script>
-auth.onAuthStateChanged(async user=>{
+auth.onAuthStateChanged(async user => {
     if(!user) return window.location.href="index.html";
-
     const doc = await db.collection("Accounts").doc(user.uid).get();
     const data = doc.data();
-    if(!data || data.role!=="requestor") return window.location.href="index.html";
-
+    if(!data || data.role !== "requestor") return window.location.href="index.html";
     document.getElementById("user-email").innerText = data.username || user.email;
-
     if(data.department) document.getElementById("department").value = data.department;
 });
 
 function logout(){ auth.signOut(); window.location.href="index.html"; }
 
-function submitRequest(){
+function submitRequest() {
     const name = document.getElementById("name").value.trim();
     const dateNeeded = document.getElementById("date").value;
     const department = document.getElementById("department").value;
@@ -164,27 +162,24 @@ function submitRequest(){
         msg.innerText="All fields are required."; msg.style.color="red"; return;
     }
     const user = auth.currentUser;
-    if(!user) return;
     db.collection("Accounts").doc(user.uid).get().then(doc=>{
         const username = doc.data().username;
         db.collection("Requests").add({
             name, dateNeeded, department, location,
-            submittedBy: username, userId: user.uid,
+            submittedBy: username,
+            userId:user.uid,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            status:{approver1:"Pending", approver2:"Pending", final:"Pending"}
+            status:{approver1:"Pending",approver2:"Pending",final:"Pending"}
         }).then(()=>{
             msg.innerText="Request submitted successfully!"; msg.style.color="green";
             document.getElementById("name").value="";
             document.getElementById("date").value="";
             document.getElementById("department").value="";
             document.getElementById("location").value="";
-        }).catch(err=>{
-            msg.innerText="Error: "+err.message; msg.style.color="red"; console.error(err);
-        });
+        }).catch(e=>{msg.innerText="Error: "+e.message; msg.style.color="red";});
     });
 }
 </script>
 	
 </body>
 </html>
-
