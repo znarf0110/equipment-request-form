@@ -19,16 +19,15 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
     <input type="text" id="name" placeholder="Full Name" required>
     <input type="email" id="email" placeholder="Email" required>
     <input type="password" id="password" placeholder="Password" required>
-
-    <select id="role" required onchange="toggleDepartment()">
+    
+    <select id="role" required>
         <option value="">Select Role</option>
         <option value="requestor">Requestor</option>
         <option value="approver">Approver</option>
         <option value="admin">Admin</option>
     </select>
 
-    <!-- Department dropdown for approvers -->
-    <select id="department" style="display:none;">
+    <select id="department" required>
         <option value="">Select Department</option>
         <option value="Sales">Sales</option>
         <option value="Marketing">Marketing</option>
@@ -48,19 +47,6 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
 <script src="firebase.js"></script>
 
 <script>
-function toggleDepartment() {
-    const role = document.getElementById("role").value;
-    const deptInput = document.getElementById("department");
-    if(role === "admin") {
-        deptInput.style.display = "none";
-        deptInput.required = false;
-        deptInput.value = "";
-    } else {
-        deptInput.style.display = "block";
-        deptInput.required = true;
-    }
-}
-
 function signupUser() {
     const username = document.getElementById("username").value.trim();
     const name = document.getElementById("name").value.trim();
@@ -70,17 +56,14 @@ function signupUser() {
     const department = document.getElementById("department").value;
     const msg = document.getElementById("message");
 
-    if(!username || !name || !email || !password || !role) {
+    if(!username || !name || !email || !password || !role || !department) {
         msg.innerText = "Please fill in all required fields.";
         msg.style.color = "red";
         return;
     }
 
-    if(role !== "admin" && !department) {
-        msg.innerText = "Please select a department.";
-        msg.style.color = "red";
-        return;
-    }
+    msg.innerText = "Checking username/email...";
+    msg.style.color = "black";
 
     db.collection("Accounts")
       .where("username","==",username).get()
@@ -90,20 +73,18 @@ function signupUser() {
       })
       .then(snapshot => {
           if(!snapshot.empty) throw { code:"email-exists" };
-          return auth.createUserWithEmailAndPassword(email,password);
+          return auth.createUserWithEmailAndPassword(email, password);
       })
       .then(userCredential => {
           const userId = userCredential.user.uid;
-          const accountData = {
+          return db.collection("Accounts").doc(userId).set({
               username,
               name,
               email,
               role,
+              department,       // unified department field
               createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          };
-          if(role === "requestor") accountData.department = department;
-          if(role === "approver") accountData.departmentApprover = department;
-          return db.collection("Accounts").doc(userId).set(accountData);
+          });
       })
       .then(() => {
           msg.innerText = "Account created successfully!";
@@ -119,8 +100,6 @@ function signupUser() {
           msg.style.color="red";
       });
 }
-
 </script>
-
 </body>
 </html>
