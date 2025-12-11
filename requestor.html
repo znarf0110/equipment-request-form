@@ -69,7 +69,7 @@ auth.onAuthStateChanged(async user=>{
     const data = doc.data();
     if(!data || data.role!=="requestor") return window.location.href="index.html";
     document.getElementById("user-email").innerText = data.username || user.email;
-    if(data.department) document.getElementById("department").value=data.department;
+    if(data.department) document.getElementById("department").value = data.department;
 });
 
 function logout(){ auth.signOut(); window.location.href="index.html"; }
@@ -81,18 +81,25 @@ function submitRequest() {
     const location = document.getElementById("location").value.trim();
     const msg = document.getElementById("message");
 
-    if(!name||!dateNeeded||!department||!location){ msg.innerText="All fields required"; msg.style.color="red"; return; }
+    if(!name || !dateNeeded || !department || !location){
+        msg.innerText="All fields required"; msg.style.color="red"; return;
+    }
 
     const user = auth.currentUser;
     db.collection("Accounts").doc(user.uid).get().then(doc=>{
         const username = doc.data().username;
+
+        // Set approverKey for Manager first
+        const approverKey = `${department}_Manager`;
+
         db.collection("Requests").add({
             name, dateNeeded, department, location,
             submittedBy: username,
             userId:user.uid,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            status:{approver1:"Pending",approver2:"Pending",final:"Pending"},
-            currentApprover:"Manager"
+            status:{approver1:"Pending", approver2:"Pending", final:"Pending"},
+            currentApprover:"Manager",
+            approverKey
         }).then(()=>{
             msg.innerText="Request submitted successfully!"; msg.style.color="green";
             document.getElementById("name").value="";
