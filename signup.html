@@ -19,15 +19,14 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
     <input type="text" id="name" placeholder="Full Name" required>
     <input type="email" id="email" placeholder="Email" required>
     <input type="password" id="password" placeholder="Password" required>
-    
+
     <select id="role" required onchange="toggleDepartment()">
         <option value="">Select Role</option>
         <option value="requestor">Requestor</option>
         <option value="approver">Approver</option>
         <option value="admin">Admin</option>
     </select>
-    
-    <!-- Department dropdown for requestor and approver -->
+
     <select id="department" style="display:none;">
         <option value="">Select Department</option>
         <option value="Sales">Sales</option>
@@ -36,6 +35,13 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
         <option value="Finance">Finance</option>
         <option value="IT">IT</option>
         <option value="Operations">Operations</option>
+    </select>
+
+    <select id="position" style="display:none;">
+        <option value="">Select Position</option>
+        <option value="Manager">Manager</option>
+        <option value="HR">HR</option>
+        <option value="Admin">Admin</option>
     </select>
 
     <button onclick="signupUser()">Sign Up</button>
@@ -51,13 +57,23 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
 function toggleDepartment() {
     const role = document.getElementById("role").value;
     const deptSelect = document.getElementById("department");
-    if(role === "requestor" || role === "approver") {
+    const posSelect = document.getElementById("position");
+
+    if(role === "requestor") {
         deptSelect.style.display = "block";
         deptSelect.required = true;
+        posSelect.style.display = "none";
+    } else if(role === "approver") {
+        deptSelect.style.display = "block";
+        deptSelect.required = true;
+        posSelect.style.display = "block";
+        posSelect.required = true;
     } else {
         deptSelect.style.display = "none";
         deptSelect.required = false;
         deptSelect.value = "";
+        posSelect.style.display = "block";
+        posSelect.required = true;
     }
 }
 
@@ -68,6 +84,7 @@ async function signupUser() {
     const password = document.getElementById("password").value.trim();
     const role = document.getElementById("role").value;
     const department = document.getElementById("department").value;
+    const position = document.getElementById("position").value;
     const msg = document.getElementById("message");
 
     if(!username || !name || !email || !password || !role) {
@@ -76,8 +93,20 @@ async function signupUser() {
         return;
     }
 
-    if((role === "requestor" || role === "approver") && !department) {
+    if(role === "requestor" && !department) {
         msg.innerText = "Please select a department.";
+        msg.style.color = "red";
+        return;
+    }
+
+    if(role === "approver" && (!department || !position)) {
+        msg.innerText = "Please select department and position.";
+        msg.style.color = "red";
+        return;
+    }
+
+    if(role === "admin" && !position) {
+        msg.innerText = "Please select position.";
         msg.style.color = "red";
         return;
     }
@@ -86,48 +115,34 @@ async function signupUser() {
     msg.style.color = "black";
 
     try {
-        // Check duplicate username
-        const usernameSnap = await db.collection("Accounts").where("username", "==", username).get();
-        if(!usernameSnap.empty) throw { code: "username-exists" };
+        const usernameSnap = await db.collection("Accounts").where("username","==",username).get();
+        if(!usernameSnap.empty) throw { code:"username-exists" };
+        const emailSnap = await db.collection("Accounts").where("email","==",email).get();
+        if(!emailSnap.empty) throw { code:"email-exists" };
 
-        // Check duplicate email
-        const emailSnap = await db.collection("Accounts").where("email", "==", email).get();
-        if(!emailSnap.empty) throw { code: "email-exists" };
-
-        // Create user
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await auth.createUserWithEmailAndPassword(email,password);
         const userId = userCredential.user.uid;
 
-        // Prepare account data
-        let accountData = {
-            username,
-            name,
-            email,
-            role,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        let accountData = { username, name, email, role, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
 
-        if(role === "requestor" || role === "approver") {
-            accountData.department = department; // unified field
-        }
+        if(role === "requestor") accountData.department = department;
+        if(role === "approver") { accountData.department = department; accountData.position = position; }
+        if(role === "admin") accountData.position = position;
 
         await db.collection("Accounts").doc(userId).set(accountData);
 
         msg.innerText = "Account created successfully!";
         msg.style.color = "green";
-        setTimeout(()=>window.location.href="index.html", 1500);
-
+        setTimeout(()=>window.location.href="index.html",1500);
     } catch(error) {
         console.error(error);
         let text = "Error creating account.";
         if(error.code==="username-exists") text="Username already exists.";
         else if(error.code==="email-exists") text="Email already registered.";
-        else if(error.code.startsWith("auth/")) text = error.message;
-        msg.innerText = text;
-        msg.style.color="red";
+        else if(error.code.startsWith("auth/")) text=error.message;
+        msg.innerText=text; msg.style.color="red";
     }
 }
 </script>
-
 </body>
 </html>
