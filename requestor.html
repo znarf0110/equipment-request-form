@@ -135,43 +135,41 @@ button {
 <script src="firebase.js"></script>
 	
 <script>
-// Redirect if user is not signed in
-  auth.onAuthStateChanged(user => {
-      if (!user) {
-          // User not signed in → redirect to login page
-          window.location.href = "index.html";
-      }
-  });
+auth.onAuthStateChanged(async function(user) {
+    if (!user) {
+        window.location.href = "index.html"; // redirect if not signed in
+        return;
+    }
 
-	
-auth.onAuthStateChanged(function(user) {
-    if (user) {
-        document.getElementById("user-email").innerText = user.email;
+    const userEmailEl = document.getElementById("user-email");
+    userEmailEl.innerText = "Loading..."; // placeholder while fetching
 
-        // 🔥 Fetch username by EMAIL (matches login logic)
-        db.collection("Accounts")
-          .where("email", "==", user.email)
-          .limit(1)
-          .get()
-          .then(snapshot => {
-              if (!snapshot.empty) {
-                  const username = snapshot.docs[0].data().username;
-                  document.getElementById("user-email").innerText = username;
-              } else {
-                  console.log("No username found for this email.");
-              }
-          })
-          .catch(error => {
-              console.error("Error fetching username:", error);
-          });
+    try {
+        // Fetch username from Firestore
+        const snapshot = await db.collection("Accounts")
+                                 .where("email", "==", user.email)
+                                 .limit(1)
+                                 .get();
 
-    } else {
-        window.location.href = "index.html";
+        if (!snapshot.empty) {
+            const username = snapshot.docs[0].data().username;
+            userEmailEl.innerText = username; // show username only
+        } else {
+            console.warn("No username found for this email. Showing email instead.");
+            userEmailEl.innerText = user.email; // fallback to email
+        }
+    } catch (error) {
+        console.error("Error fetching username:", error);
+        userEmailEl.innerText = user.email; // fallback to email on error
     }
 });
 
 function logout() {
-    auth.signOut().catch(error => alert("Error logging out: " + error.message));
+    auth.signOut().then(() => {
+        window.location.href = "index.html";
+    }).catch(error => {
+        alert("Error logging out: " + error.message);
+    });
 }
 </script>
 
@@ -180,6 +178,7 @@ function logout() {
 	
 </body>
 </html>
+
 
 
 
