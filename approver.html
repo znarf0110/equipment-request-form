@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Approver Dashboard</title>
+<style>
+body { font-family: Arial; background:#f0f0f0; display:flex; justify-content:center; align-items:flex-start; padding-top:50px; margin:0; }
+.container { background:white; padding:30px; border-radius:10px; width:900px; max-width:95%; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
+h2 { text-align:center; margin-bottom:20px; }
+table { width:100%; border-collapse: collapse; margin-top:20px; }
+th, td { padding:10px; border:1px solid #ccc; text-align:left; }
+.user-status { text-align:right; font-size:0.9em; color:#555; }
+.logout-btn { width:80px; padding:10px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; float:right; margin-top:0; }
+button.approve, button.reject { padding:5px 10px; margin-right:5px; border:none; border-radius:5px; cursor:pointer; }
+button.approve { background:#28a745; color:white; }
+button.reject { background:#dc3545; color:white; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
+
+    <h2>Approver Dashboard - Department Requests</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date Requested</th>
+                <th>Requestor</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="requests-body">
+            <tr><td colspan="5">Loading requests...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
+<script src="firebase.js"></script>
+
+<script>
+// --- Auth & Role Protection ---
+auth.onAuthStateChanged(async user => {
+    if(!user) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    document.getElementById("user-email").innerText = user.email;
+
+    const userDoc = await db.collection("Accounts").doc(user.uid).get();
+    const userData = userDoc.data();
+
+    if(!userData || userData.role !== "approver") {
+        alert("Access denied. Approvers only.");
+        auth.signOut();
+        window.location.href = "index.html";
+        return;
+    }
+
+    document.getElementById("user-email").innerText = userData.username;
+
+    // Load requests for this approver's department
+    loadRequests(userData.department, user.uid);
+});
+
+// --- Load department requests ---
+function loadRequests(department, approverId) {
+    const tbody = document.getElementById("requests-body");
+    tbody.innerHTML = "";
+
+    db.collection("Requests")
+      .where("department","==",department)
+      .orderBy("timestamp","desc")
+      .get()
+      .then(snapshot => {
+          if(snapshot.empty){
+              tbody.innerHTML = "<tr><td colspan='5'>No requests found.</td></tr>";
+              return;
+          }
+
+          snapshot.forEach(doc => {
+              const data = doc.data();
+              const date = data.timestamp?.toDate().toLocaleString() || "";
+              const statusText = data.status?.approver1 || "Pending";
+
+              // Check if this approver is first or second stage
+              let stage = "approver1";
+              if(data.status?.approver1==="Approved") stage="approver2";
+              if(data.status?.approver2==="Approved") stage="final";
+
+              // Only show requests pending at this approver stage
+              const isPending = !data.status || data.status[stage]==="Pending";
+              const actions = isPending ? 
+                  `<button class="approve" onclick="approveRequest('${doc.id}','${stage}')">Approve</button>
+                   <button class="reject" onclick="rejectRequest('${doc.id}','${stage}')">Reject</button>` : "";
+
+              const row = `<tr>
+                  <td>${date}</td>
+                  <td>${data.submittedBy}</td>
+                  <td>${data.location}</td>
+                  <td>${statusText}</td>
+                  <td>${actions}</td>
+              </tr>`;
+              tbody.innerHTML += row;
+          });
+      })
+      .catch(error => {
+          console.error("Error loading requests:", error);
+          tbody.innerHTML = "<tr><td colspan='5'>Error loading requests.</td></tr>";
+      });
+}
+
+// --- Approve / Reject functions ---
+function approveRequest(requestId, stage) {
+    const update = {};
+    update[`status.${stage}`] = "Approved";
+
+    db.collection("Requests").doc(requestId).update(update)
+      .then(()=> loadRequestsForCurrentApprover())
+      .catch(err=> alert("Error approving: " + err));
+}
+
+function rejectRequest(requestId, stage) {
+    const update = {};
+    update[`status.${stage}`] = "Rejected";
+
+    db.collection("Requests").doc(requestId).update(update)
+      .then(()=> loadRequestsForCurrentApprover())
+      .catch(err=> alert("Error rejecting: " + err));
+}
+
+// Helper to reload current approver's department
+function loadRequestsForCurrentApprover() {
+    auth.onAuthStateChanged(async user => {
+        if(!user) return;
+        const userDoc = await db.collection("Accounts").doc(user.uid).get();
+        const dept = userDoc.data().department;
+        loadRequests(dept, user.uid);
+    });
+}
+
+// --- Logout ---
+function logout() {
+    auth.signOut().catch(error => alert("Error logging out: " + error.message));
+}
+</script>
+
+</body>
+</html>
