@@ -109,9 +109,8 @@ auth.onAuthStateChanged(async user => {
 
     document.getElementById("user-email").innerText = data.username || user.email;
 
-    const approverDept = data.departmentApprover; // fetch the approver's department
+    const approverDept = data.department; // make sure the approver account has 'department' field
 
-    // Fetch requests for this approver's department
     db.collection("Requests")
       .where("department", "==", approverDept)
       .orderBy("timestamp", "desc")
@@ -137,6 +136,7 @@ auth.onAuthStateChanged(async user => {
           });
       });
 });
+
 
 // ---------------- LOGOUT ------------------
 function logout() {
