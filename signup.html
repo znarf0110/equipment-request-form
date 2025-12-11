@@ -4,11 +4,48 @@
 <meta charset="UTF-8">
 <title>Signup</title>
 <style>
-body { font-family: Arial; background:#f0f0f0; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
-.container { background:white; padding:30px; border-radius:10px; width:400px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
-input, select { width:100%; padding:10px; margin:10px 0; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; }
-button { width:100%; padding:12px; background:#007bff; color:white; border:none; border-radius:6px; cursor:pointer; }
-#message { margin-top:15px; font-weight:bold; }
+body { 
+	font-family: Arial; 
+	background:#f0f0f0; 
+	display:flex; 
+	justify-content:center; 
+	align-items:center; 
+	height:100vh; 
+	margin:0; 
+	}
+	
+.container { 
+	background:white; 
+	padding:30px; 
+	border-radius:10px; 
+	width:400px; 
+	box-shadow:0 5px 15px rgba(0,0,0,0.1); 
+	}
+	
+input, select { 
+	width:100%; 
+	padding:10px; 
+	margin:10px 0; 
+	border-radius:6px; 
+	border:1px solid #ccc; 
+	box-sizing:border-box; 
+	}
+	
+button { 
+	width:100%; 
+	padding:12px; 
+	background:#007bff; 
+	color:white; 
+	border:none; 
+	border-radius:6px; 
+	cursor:pointer; 
+	}
+	
+#message { 
+	margin-top:15px; 
+	font-weight:bold; 
+	}
+	
 </style>
 </head>
 <body>
@@ -35,7 +72,7 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
         <option value="HR">HR</option>
         <option value="Finance">Finance</option>
         <option value="IT">IT</option>
-        <!-- Add more departments as needed -->
+        <option value="Operations">Operations</option>
     </select>
 
     <button onclick="signupUser()">Sign Up</button>
@@ -48,20 +85,14 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
 <script src="firebase.js"></script>
 
 <script>
-function toggleDepartment() {
+function toggleDepartment(){
     const role = document.getElementById("role").value;
-    const deptInput = document.getElementById("department");
-    if(role === "approver") {
-        deptInput.style.display = "block";
-        deptInput.required = true;
-    } else {
-        deptInput.style.display = "none";
-        deptInput.required = false;
-        deptInput.value = "";
-    }
+    const dept = document.getElementById("department");
+    if(role==="approver"){ dept.style.display="block"; dept.required=true; }
+    else { dept.style.display="none"; dept.required=false; dept.value=""; }
 }
 
-function signupUser() {
+function signupUser(){
     const username = document.getElementById("username").value.trim();
     const name = document.getElementById("name").value.trim();
     const email = document.getElementById("email").value.trim();
@@ -70,58 +101,29 @@ function signupUser() {
     const department = document.getElementById("department").value;
     const msg = document.getElementById("message");
 
-    if(!username || !name || !email || !password || !role) {
-        msg.innerText = "Please fill in all required fields.";
-        msg.style.color = "red";
-        return;
+    if(!username||!name||!email||!password||!role){
+        msg.innerText="Fill all required fields"; msg.style.color="red"; return;
     }
+    if(role==="approver"&&!department){ msg.innerText="Select department for approver"; msg.style.color="red"; return; }
 
-    if(role === "approver" && !department) {
-        msg.innerText = "Please select a department for approvers.";
-        msg.style.color = "red";
-        return;
-    }
+    msg.innerText="Checking..."; msg.style.color="black";
 
-    msg.innerText = "Checking username/email...";
-    msg.style.color = "black";
-
-    db.collection("Accounts")
-      .where("username","==",username)
-      .get()
-      .then(snapshot => {
-          if(!snapshot.empty) throw { code:"username-exists" };
-          return db.collection("Accounts").where("email","==",email).get();
-      })
-      .then(snapshot => {
-          if(!snapshot.empty) throw { code:"email-exists" };
-          return auth.createUserWithEmailAndPassword(email, password);
-      })
-      .then(userCredential => {
-          const userId = userCredential.user.uid;
-          return db.collection("Accounts").doc(userId).set({
-              username,
-              name,
-              email,
-              role,
-              department: role==="approver"? department : "",
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-      })
-      .then(() => {
-          msg.innerText = "Account created successfully!";
-          msg.style.color = "green";
-          setTimeout(()=>window.location.href="index.html",1500);
-      })
-      .catch(error => {
-          let text = "Error creating account.";
-          if(error.code==="username-exists") text="Username already exists.";
-          if(error.code==="email-exists") text="Email already registered.";
-          if(error.code.startsWith("auth/")) text = error.message;
-          msg.innerText = text;
-          msg.style.color="red";
+    db.collection("Accounts").where("username","==",username).get()
+      .then(snap=>{ if(!snap.empty) throw {code:"username-exists"}; return db.collection("Accounts").where("email","==",email).get(); })
+      .then(snap=>{ if(!snap.empty) throw {code:"email-exists"}; return auth.createUserWithEmailAndPassword(email,password); })
+      .then(cred=>db.collection("Accounts").doc(cred.user.uid).set({
+          username,name,email,role,department:role==="approver"?department:"",
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      }))
+      .then(()=>{ msg.innerText="Account created!"; msg.style.color="green"; setTimeout(()=>window.location.href="index.html",1500); })
+      .catch(err=>{
+          let text="Error"; 
+          if(err.code==="username-exists") text="Username exists";
+          if(err.code==="email-exists") text="Email exists";
+          if(err.code.startsWith("auth/")) text=err.message;
+          msg.innerText=text; msg.style.color="red";
       });
 }
 </script>
-
 </body>
 </html>
