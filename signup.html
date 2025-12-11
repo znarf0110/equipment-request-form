@@ -27,7 +27,16 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
         <option value="admin">Admin</option>
     </select>
     
-    <input type="text" id="department" placeholder="Department (for approvers)" style="display:none;">
+    <!-- Department dropdown for approvers -->
+    <select id="department" style="display:none;">
+        <option value="">Select Department</option>
+        <option value="Sales">Sales</option>
+        <option value="Marketing">Marketing</option>
+        <option value="HR">HR</option>
+        <option value="Finance">Finance</option>
+        <option value="IT">IT</option>
+        <!-- Add more departments as needed -->
+    </select>
 
     <button onclick="signupUser()">Sign Up</button>
     <p id="message"></p>
@@ -58,7 +67,7 @@ function signupUser() {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
     const role = document.getElementById("role").value;
-    const department = document.getElementById("department").value.trim();
+    const department = document.getElementById("department").value;
     const msg = document.getElementById("message");
 
     if(!username || !name || !email || !password || !role) {
@@ -68,7 +77,7 @@ function signupUser() {
     }
 
     if(role === "approver" && !department) {
-        msg.innerText = "Please enter department for approvers.";
+        msg.innerText = "Please select a department for approvers.";
         msg.style.color = "red";
         return;
     }
@@ -76,7 +85,6 @@ function signupUser() {
     msg.innerText = "Checking username/email...";
     msg.style.color = "black";
 
-    // Check for duplicate username/email
     db.collection("Accounts")
       .where("username","==",username)
       .get()
