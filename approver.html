@@ -41,19 +41,26 @@ button.approve-btn { padding:5px 10px; background:#28a745; color:white; border:n
 
 <script>
 let currentPosition="";
+let currentDept="";
+
 auth.onAuthStateChanged(async user=>{
     if(!user) return window.location.href="index.html";
     const doc = await db.collection("Accounts").doc(user.uid).get();
     const data = doc.data();
     if(!data || data.role!=="approver") return window.location.href="index.html";
+
     document.getElementById("user-email").innerText = data.username || user.email;
     currentPosition = data.position;
+    currentDept = data.department;
     loadRequests();
 });
 
 function loadRequests() {
-    db.collection("Requests").where("currentApprover","==",currentPosition).orderBy("timestamp","desc")
-    .onSnapshot(snapshot=>{
+    const approverKey = `${currentDept}_${currentPosition}`;
+    db.collection("Requests")
+      .where("approverKey","==",approverKey)
+      .orderBy("timestamp","desc")
+      .onSnapshot(snapshot=>{
         const tbody = document.getElementById("requests-tbody");
         tbody.innerHTML="";
         snapshot.forEach(doc=>{
@@ -79,9 +86,13 @@ function approveRequest(requestId) {
     const ref = db.collection("Requests").doc(requestId);
     ref.get().then(doc=>{
         const r = doc.data();
-        if(currentPosition==="Manager") ref.update({ "status.approver1":"Approved", currentApprover:"HR" });
-        else if(currentPosition==="HR") ref.update({ "status.approver2":"Approved", currentApprover:"Admin" });
-        else if(currentPosition==="Admin") ref.update({ "status.final":"Approved", currentApprover:"" });
+        if(currentPosition==="Manager") {
+            ref.update({ "status.approver1":"Approved", currentApprover:"HR", approverKey:`${r.department}_HR` });
+        } else if(currentPosition==="HR") {
+            ref.update({ "status.approver2":"Approved", currentApprover:"Admin", approverKey:`${r.department}_Admin` });
+        } else if(currentPosition==="Admin") {
+            ref.update({ "status.final":"Approved", currentApprover:"", approverKey:"" });
+        }
     });
 }
 
