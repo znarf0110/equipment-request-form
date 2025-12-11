@@ -4,69 +4,61 @@
 <meta charset="UTF-8">
 <title>Approver Dashboard</title>
 <style>
-body { 
-	font-family: Arial; 
-	background: #f0f0f0; 
-	margin:0; 
-	display:flex; 
-	justify-content:center; 
-	padding:20px 0; 
-	}
-	
-.container { 
-	width:95%; 
-	max-width:1200px; 
-	background:white; 
-	padding:20px; 
-	border-radius:10px; 
-	box-shadow:0 5px 15px rgba(0,0,0,0.1);
-	}
-	
-h2 { 
-	text-align:center; 
-	margin-bottom:20px; 
-	}
-	
-.user-status { 
-	text-align:right; 
-	font-size:0.9em; 
-	color:#555; 
-	margin-bottom:10px; 
-	}
-	
-.logout-btn { 
-	width:80px; 
-	padding:8px; 
-	background:#dc3545; 
-	color:white; 
-	border:none; 
-	border-radius:6px; 
-	cursor:pointer; 
-	font-size:14px; 
-	float:right; 
-	margin-top:10px;
-	}
-table { 
-	width:100%; 
-	border-collapse:collapse; 
-	margin-top:40px; 
-	}
-	
-th,td { 
-	border:1px solid #ccc; 
-	padding:10px; 
-	text-align:left; 
-	}
-	
-th { 
-	background:#007bff; 
-	color:white; 
-	}
-	
-tr:nth-child(even){
-	background:#f9f9f9;
-	}
-	
+body {
+    font-family: Arial, sans-serif;
+    background: #f0f0f0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    padding: 20px 0;
+}
+.container {
+    width: 95%;
+    max-width: 1200px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.user-status {
+    text-align: right;
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 10px;
+}
+.logout-btn {
+    width: 80px;
+    padding: 8px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    float: right;
+    margin-top: 10px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 40px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left;
+}
+th {
+    background: #007bff;
+    color: white;
+}
+tr:nth-child(even) {
+    background: #f9f9f9;
+}
 </style>
 </head>
 <body>
@@ -74,7 +66,9 @@ tr:nth-child(even){
 <div class="container">
   <button class="logout-btn" onclick="logout()">Logout</button>
   <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
+
   <h2>Approver Dashboard</h2>
+
   <table>
     <thead>
       <tr>
@@ -89,49 +83,71 @@ tr:nth-child(even){
         <th>Final</th>
       </tr>
     </thead>
-    <tbody id="requests-tbody"></tbody>
+    <tbody id="requests-tbody">
+      <!-- Requests will populate here -->
+    </tbody>
   </table>
 </div>
 
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
 <script src="firebase.js"></script>
 
 <script>
-auth.onAuthStateChanged(async user=>{
-    if(!user) return window.location.href="index.html";
+// -------------- AUTH CHECK ----------------
+auth.onAuthStateChanged(async user => {
+    if (!user) return window.location.href = "index.html";
+
     const doc = await db.collection("Accounts").doc(user.uid).get();
     const data = doc.data();
-    if(!data || data.role!=="approver") return window.location.href="index.html";
+
+    if (!data || data.role !== "approver") {
+        return window.location.href = "index.html";
+    }
 
     document.getElementById("user-email").innerText = data.username || user.email;
-    const approverDept = data.departmentApprover;
+
+    const approverDept = data.departmentApprover; // must match requestor.department
+
+    // Fetch requests where requestor.department == approver.departmentApprover
     db.collection("Requests")
-      .where("department","==",approverDept)
-      .orderBy("timestamp","desc")
-      .onSnapshot(snapshot=>{
-        const tbody = document.getElementById("requests-tbody");
-        tbody.innerHTML="";
-        snapshot.forEach(doc=>{
-            const r = doc.data();
-            const ts = r.timestamp ? r.timestamp.toDate().toLocaleString() : "";
-            tbody.innerHTML+=`<tr>
-                <td>${ts}</td>
-                <td>${r.name}</td>
-                <td>${r.dateNeeded}</td>
-                <td>${r.department}</td>
-                <td>${r.location}</td>
-                <td>${r.submittedBy}</td>
-                <td>${r.status.approver1}</td>
-                <td>${r.status.approver2}</td>
-                <td>${r.status.final}</td>
-            </tr>`;
-        });
+      .where("department", "==", approverDept)
+      .orderBy("timestamp", "desc")
+      .onSnapshot(snapshot => {
+          const tableBody = document.getElementById("requests-tbody");
+          tableBody.innerHTML = "";
+          snapshot.forEach(doc => {
+              const r = doc.data();
+              const timestamp = r.timestamp ? r.timestamp.toDate().toLocaleString() : "";
+              tableBody.innerHTML += `
+                  <tr>
+                      <td>${timestamp}</td>
+                      <td>${r.name}</td>
+                      <td>${r.dateNeeded}</td>
+                      <td>${r.department}</td>
+                      <td>${r.location}</td>
+                      <td>${r.submittedBy}</td>
+                      <td>${r.status.approver1}</td>
+                      <td>${r.status.approver2}</td>
+                      <td>${r.status.final}</td>
+                  </tr>
+              `;
+          });
+
+          if(snapshot.empty){
+              tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center;">No requests for your department.</td></tr>`;
+          }
       });
 });
 
-function logout(){ auth.signOut(); window.location.href="index.html"; }
+// ---------------- LOGOUT ------------------
+function logout() {
+    auth.signOut();
+    window.location.href = "index.html";
+}
 </script>
+
 </body>
 </html>
