@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Signup User</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+.container {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    text-align: center;
+}
+input {
+    width: calc(100% - 24px);
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background: #28a745;
+    color: white;
+    cursor: pointer;
+}
+#message {
+    margin-top: 15px;
+    font-weight: bold;
+    min-height: 20px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Create New User</h2>
+    <input type="text" id="username" placeholder="Username" required>
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <button onclick="signupUser()">Create User</button>
+    <p id="message"></p>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<!-- Firebase config -->
+<script src="firebase.js"></script>
+
+<script>
+function signupUser() {
+    const username = document.getElementById("username").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const msg = document.getElementById("message");
+
+    if (!username || !email || !password) {
+        msg.innerHTML = "All fields are required.";
+        msg.style.color = "red";
+        return;
+    }
+
+    msg.innerHTML = "Creating user...";
+    msg.style.color = "black";
+
+    // Step 1: Create Firebase Auth user
+    auth.createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+            const uid = userCredential.user.uid;
+
+            // Step 2: Add to Firestore
+            return db.collection("Accounts").doc(uid).set({
+                username: username,
+                email: email
+            });
+        })
+        .then(() => {
+            msg.innerHTML = "User created successfully!";
+            msg.style.color = "green";
+            document.getElementById("username").value = "";
+            document.getElementById("email").value = "";
+            document.getElementById("password").value = "";
+        })
+        .catch(error => {
+            console.error(error);
+            msg.innerHTML = error.message;
+            msg.style.color = "red";
+        });
+}
+</script>
+
+</body>
+</html>
