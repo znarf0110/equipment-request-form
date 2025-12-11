@@ -66,9 +66,7 @@ tr:nth-child(even) {
 <div class="container">
   <button class="logout-btn" onclick="logout()">Logout</button>
   <div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
-
   <h2>Approver Dashboard</h2>
-
   <table>
     <thead>
       <tr>
@@ -83,70 +81,51 @@ tr:nth-child(even) {
         <th>Final</th>
       </tr>
     </thead>
-    <tbody id="requests-tbody">
-      <!-- Requests will populate here -->
-    </tbody>
+    <tbody id="requests-tbody"></tbody>
   </table>
 </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
 <script src="firebase.js"></script>
 
 <script>
-// -------------- AUTH CHECK ----------------
 auth.onAuthStateChanged(async user => {
-    if (!user) return window.location.href = "index.html";
-
+    if(!user) return window.location.href="index.html";
     const doc = await db.collection("Accounts").doc(user.uid).get();
     const data = doc.data();
-
-    if (!data || data.role !== "approver") {
-        return window.location.href = "index.html";
-    }
-
+    if(!data || data.role !== "approver") return window.location.href="index.html";
     document.getElementById("user-email").innerText = data.username || user.email;
 
-    const approverDept = data.departmentApprover; // must match requestor.department
+    const approverDept = data.department; // same field as requestor
 
-    // Fetch requests where requestor.department == approver.departmentApprover
     db.collection("Requests")
-      .where("department", "==", approverDept)
-      .orderBy("timestamp", "desc")
-      .onSnapshot(snapshot => {
-          const tableBody = document.getElementById("requests-tbody");
-          tableBody.innerHTML = "";
-          snapshot.forEach(doc => {
+      .where("department","==",approverDept)
+      .orderBy("timestamp","desc")
+      .onSnapshot(snapshot=>{
+          const tbody = document.getElementById("requests-tbody");
+          tbody.innerHTML="";
+          snapshot.forEach(doc=>{
               const r = doc.data();
-              const timestamp = r.timestamp ? r.timestamp.toDate().toLocaleString() : "";
-              tableBody.innerHTML += `
-                  <tr>
-                      <td>${timestamp}</td>
-                      <td>${r.name}</td>
-                      <td>${r.dateNeeded}</td>
-                      <td>${r.department}</td>
-                      <td>${r.location}</td>
-                      <td>${r.submittedBy}</td>
-                      <td>${r.status.approver1}</td>
-                      <td>${r.status.approver2}</td>
-                      <td>${r.status.final}</td>
-                  </tr>
-              `;
+              const ts = r.timestamp ? r.timestamp.toDate().toLocaleString() : "";
+              tbody.innerHTML += `
+                <tr>
+                  <td>${ts}</td>
+                  <td>${r.name}</td>
+                  <td>${r.dateNeeded}</td>
+                  <td>${r.department}</td>
+                  <td>${r.location}</td>
+                  <td>${r.submittedBy}</td>
+                  <td>${r.status.approver1}</td>
+                  <td>${r.status.approver2}</td>
+                  <td>${r.status.final}</td>
+                </tr>`;
           });
-
-          if(snapshot.empty){
-              tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center;">No requests for your department.</td></tr>`;
-          }
       });
 });
 
-// ---------------- LOGOUT ------------------
-function logout() {
-    auth.signOut();
-    window.location.href = "index.html";
-}
+function logout(){ auth.signOut(); window.location.href="index.html"; }
 </script>
 
 </body>
