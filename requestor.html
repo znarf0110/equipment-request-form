@@ -18,7 +18,7 @@ body {
     background: white;
     padding: 30px;
     width: 900px;
-    max-width: 90%; /* Added max-width for responsiveness */
+    max-width: 90%;
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
@@ -30,28 +30,27 @@ h2 {
 /* --- FLEXBOX FOR NAME | DATE LAYOUT --- */
 .requestor-info {
     display: flex;
-    gap: 20px; /* Space between the two field groups */
+    gap: 20px;
     margin-bottom: 20px;
     align-items: center;
 }
 .field-group {
-    flex: 1; /* Makes both groups take equal width */
+    flex: 1;
     display: flex;
     align-items: center;
 }
 .field-group label {
     margin-right: 10px;
     font-weight: bold;
-    white-space: nowrap; /* Prevents label from wrapping */
+    white-space: nowrap;
 }
-.field-group input {
-    /* Reset width for Flexbox context */
-    width: 100%; 
+.field-group input, .field-group select {
+    width: 100%;
     padding: 12px;
     border: 1px solid #ccc;
     border-radius: 6px;
     box-sizing: border-box;
-    margin: 0; /* Remove default margin */
+    margin: 0;
 }
 
 /* --- User Info Display --- */
@@ -71,26 +70,23 @@ button {
     border-radius: 6px;
     cursor: pointer;
     font-size: 16px;
-    display: block; /* REQUIRED: Makes the button respect margin: auto */
-    margin: 20px auto 0; /* Centers horizontally (left/right auto) and sets top margin (20px) */
-
+    display: block;
+    margin: 20px auto 0;
 }
-	
+
 .logout-btn {
-    width: 80px; 
+    width: 80px;
     padding: 10px;
-    background: #dc3545; 
-    color: white; 
-    border: none; 
-    border-radius: 6px; 
-    cursor: pointer; 
-    font-size: 14px; 
-    float: right; 
-    margin-top: 20px; 
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    float: right;
+    margin-top: 20px;
     text-align: center;
 }
-
-	
 </style>
 </head>
 <body>
@@ -115,54 +111,93 @@ button {
   <div class="requestor-info">
     <div class="field-group">
       <label for="department">Department:</label>
-      <input type="text" id="department" placeholder="Requestor Department">
+
+      <!-- NEW DROPDOWN LIST -->
+      <select id="department">
+        <option value="">Select Department</option>
+        <option value="Sales">Sales</option>
+        <option value="Marketing">Marketing</option>
+        <option value="HR">HR</option>
+        <option value="IT">IT</option>
+        <option value="Finance">Finance</option>
+        <option value="Operations">Operations</option>
+      </select>
     </div>
+
     <div class="field-group">
       <label for="location">Location</label>
       <input type="text" id="location">
     </div>
   </div>
 
-  <button onclick="Submit()">Submit Request</button>
+  <button onclick="submitRequest()">Submit Request</button>
   <p id="message"></p>
 </div>
 
 <script>
-auth.onAuthStateChanged(async user=>{
-    if(!user) return window.location.href="index.html";
-    const doc = await db.collection("Accounts").doc(user.uid).get();
-    if(doc.data().role!=="requestor") return window.location.href="index.html";
-    // preselect department if needed
-    document.getElementById("department").value = doc.data().department || "";
+// Wait for Firebase to load globally (from your index.html)
+auth.onAuthStateChanged(async user => {
+    if (!user) return window.location.href = "index.html";
+
+    document.getElementById("user-email").innerText = user.email;
+
+    const docSnap = await db.collection("Accounts").doc(user.uid).get();
+    const data = docSnap.data();
+
+    if (data.role !== "requestor") return window.location.href = "index.html";
+
+    // Auto-fill department from registered account
+    if (data.department) {
+        document.getElementById("department").value = data.department;
+    }
 });
 
-function logout(){ auth.signOut(); window.location.href="index.html"; }
+function logout() {
+    auth.signOut();
+    window.location.href = "index.html";
+}
 
-function submitRequest(){
+function submitRequest() {
     const name = document.getElementById("name").value.trim();
     const dateNeeded = document.getElementById("date").value;
     const department = document.getElementById("department").value;
     const location = document.getElementById("location").value.trim();
     const msg = document.getElementById("message");
 
-    if(!name||!dateNeeded||!department||!location){
-        msg.innerText="All fields are required."; msg.style.color="red"; return;
+    if (!name || !dateNeeded || !department || !location) {
+        msg.innerText = "All fields are required.";
+        msg.style.color = "red";
+        return;
     }
 
     const user = auth.currentUser;
-    db.collection("Accounts").doc(user.uid).get().then(doc=>{
+
+    db.collection("Accounts").doc(user.uid).get().then(doc => {
         const username = doc.data().username;
         const dept = doc.data().department;
 
         db.collection("Requests").add({
-            name, dateNeeded, department:dept, location,
-            submittedBy: username, userId:user.uid,
+            name,
+            dateNeeded,
+            department: dept, // approver will filter based on this
+            location,
+            submittedBy: username,
+            userId: user.uid,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            status: { approver1:"Pending", approver2:"Pending", final:"Pending" }
-        }).then(()=>{ msg.innerText="Request submitted!"; msg.style.color="green"; });
+            status: {
+                approver1: "Pending",
+                approver2: "Pending",
+                final: "Pending"
+            }
+        }).then(() => {
+            msg.innerText = "Request submitted!";
+            msg.style.color = "green";
+
+            document.getElementById("name").value = "";
+            document.getElementById("location").value = "";
+        });
     });
 }
 </script>
-	
 </body>
 </html>
