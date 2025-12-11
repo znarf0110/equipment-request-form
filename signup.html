@@ -107,13 +107,10 @@ async function signupUser() {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        if(role === "requestor") {
-            accountData.department = department; // requestor department
-        } else if(role === "approver") {
-            accountData.departmentApprover = department; // approver department
+        if(role === "requestor" || role === "approver") {
+            accountData.department = department; // unified field
         }
 
-        // Save to Firestore
         await db.collection("Accounts").doc(userId).set(accountData);
 
         msg.innerText = "Account created successfully!";
