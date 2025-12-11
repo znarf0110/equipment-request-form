@@ -2,62 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Secure Login</title>
+<title>Login</title>
 <style>
-body { 
-	font-family: Arial; 
-	background:#f0f0f0; 
-	display:flex; 
-	justify-content:center; 
-	align-items:center; 
-	height:100vh; 
-	margin:0; 
-	}
-	
-.container { 
-	background:white; 
-	padding:30px; 
-	border-radius:10px; 
-	width:400px; 
-	box-shadow:0 5px 15px rgba(0,0,0,0.1); 
-	text-align:center; 
-	}
-	
-input { 
-	width:100%; 
-	padding:12px; 
-	margin:10px 0; 
-	border:1px solid #ccc; 
-	border-radius:6px; 
-	box-sizing:border-box; 
-	}
-	
-button { 
-	width:100%; 
-	padding:12px; 
-	background:#007bff; 
-	color:white; 
-	border:none; 
-	border-radius:6px; 
-	cursor:pointer; 
-	}
-	
-#message { 
-	margin-top:15px; 
-	font-weight:bold; 
-	}
-	
+body { font-family: Arial; background:#f0f0f0; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+.container { background:white; padding:30px; border-radius:10px; width:400px; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
+input { width:100%; padding:10px; margin:10px 0; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; }
+button { width:100%; padding:12px; background:#007bff; color:white; border:none; border-radius:6px; cursor:pointer; }
+#message { margin-top:15px; font-weight:bold; }
 </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Secure Login</h2>
+    <h2>Login</h2>
     <input type="email" id="email" placeholder="Email" required>
     <input type="password" id="password" placeholder="Password" required>
-    <button onclick="login()">Login</button>
+    <button id="login-btn">Login</button>
     <p id="message"></p>
-
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
@@ -66,29 +27,58 @@ button {
 <script src="firebase.js"></script>
 
 <script>
-function login(){
+// ---------------- LOGIN FUNCTION ----------------
+const loginBtn = document.getElementById("login-btn");
+const msg = document.getElementById("message");
+
+loginBtn.addEventListener("click", async () => {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
-    const msg = document.getElementById("message");
-    if(!email || !password){ msg.innerText="Enter email and password"; msg.style.color="red"; return; }
 
-    auth.signInWithEmailAndPassword(email,password)
-        .then(userCredential=>{
-            const userId = userCredential.user.uid;
-            return db.collection("Accounts").doc(userId).get();
-        })
-        .then(doc=>{
-            const role = doc.data().role;
-            if(role==="requestor") window.location.href="requestor.html";
-            else if(role==="approver") window.location.href="approver.html";
-            else if(role==="admin") window.location.href="admin.html";
-            else msg.innerText="Unknown role"; msg.style.color="red";
-        })
-        .catch(error=>{
-            msg.innerText="Invalid credentials"; msg.style.color="red";
-            console.error(error);
-        });
-}
+    if(!email || !password){
+        msg.innerText = "Please enter both email and password.";
+        msg.style.color = "red";
+        return;
+    }
+
+    msg.innerText = "Logging in...";
+    msg.style.color = "black";
+
+    try {
+        // Sign in with Firebase Auth
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        // Fetch Firestore document to get role
+        const doc = await db.collection("Accounts").doc(user.uid).get();
+        const data = doc.data();
+        if(!data) throw new Error("User data not found.");
+
+        // Redirect based on role
+        switch(data.role){
+            case "requestor":
+                window.location.href = "requestor.html";
+                break;
+            case "approver":
+                window.location.href = "approver.html";
+                break;
+            case "admin":
+                window.location.href = "admin.html";
+                break;
+            default:
+                throw new Error("Role not assigned.");
+        }
+    } catch(error){
+        console.error(error);
+        if(error.code==="auth/user-not-found" || error.code==="auth/wrong-password"){
+            msg.innerText = "Invalid credentials.";
+        } else {
+            msg.innerText = error.message;
+        }
+        msg.style.color = "red";
+    }
+});
 </script>
+
 </body>
 </html>
