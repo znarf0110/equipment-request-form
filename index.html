@@ -107,6 +107,15 @@ function login() {
           // Step 3 — Redirect to dashboard
           window.location.href = "requestor.html";
       })
+	db.collection("Accounts")
+  .where("username", "==", username)
+  .limit(1)
+  .get()
+  .then(snapshot => {
+      console.log("Snapshot empty?", snapshot.empty);
+      console.log("Docs:", snapshot.docs.map(d => d.data()));
+
+		
       .catch(error => {
           let errorText = "Invalid username or password.";
 
@@ -129,5 +138,6 @@ function login() {
 </body>
 
 </html>
+
 
 
