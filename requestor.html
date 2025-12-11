@@ -140,44 +140,51 @@ button {
 <script src="firebase.js"></script>
 
 <script>
-// AUTH CHECK
 auth.onAuthStateChanged(async user=>{
     if(!user) return window.location.href="index.html";
+
     const doc = await db.collection("Accounts").doc(user.uid).get();
-    if(!doc.data() || doc.data().role!=="requestor") return window.location.href="index.html";
-    document.getElementById("user-email").innerText = doc.data().username || user.email;
-    if(doc.data().department) document.getElementById("department").value = doc.data().department;
+    const data = doc.data();
+    if(!data || data.role!=="requestor") return window.location.href="index.html";
+
+    document.getElementById("user-email").innerText = data.username || user.email;
+
+    if(data.department) document.getElementById("department").value = data.department;
 });
 
 function logout(){ auth.signOut(); window.location.href="index.html"; }
 
 function submitRequest(){
-    const name=document.getElementById("name").value.trim();
-    const dateNeeded=document.getElementById("date").value;
-    const department=document.getElementById("department").value;
-    const location=document.getElementById("location").value.trim();
-    const msg=document.getElementById("message");
-    if(!name||!dateNeeded||!department||!location){ msg.innerText="All fields required"; msg.style.color="red"; return; }
-
+    const name = document.getElementById("name").value.trim();
+    const dateNeeded = document.getElementById("date").value;
+    const department = document.getElementById("department").value;
+    const location = document.getElementById("location").value.trim();
+    const msg = document.getElementById("message");
+    if(!name || !dateNeeded || !department || !location){
+        msg.innerText="All fields are required."; msg.style.color="red"; return;
+    }
     const user = auth.currentUser;
     if(!user) return;
-
     db.collection("Accounts").doc(user.uid).get().then(doc=>{
         const username = doc.data().username;
         db.collection("Requests").add({
             name, dateNeeded, department, location,
-            submittedBy: username, userId:user.uid,
-            timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-            status:{approver1:"Pending",approver2:"Pending",final:"Pending"}
+            submittedBy: username, userId: user.uid,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            status:{approver1:"Pending", approver2:"Pending", final:"Pending"}
         }).then(()=>{
-            msg.innerText="Request submitted!"; msg.style.color="green";
+            msg.innerText="Request submitted successfully!"; msg.style.color="green";
             document.getElementById("name").value="";
             document.getElementById("date").value="";
             document.getElementById("department").value="";
             document.getElementById("location").value="";
-        }).catch(e=>{ msg.innerText="Error: "+e.message; msg.style.color="red"; console.error(e); });
+        }).catch(err=>{
+            msg.innerText="Error: "+err.message; msg.style.color="red"; console.error(err);
+        });
     });
 }
 </script>
+	
 </body>
 </html>
+
