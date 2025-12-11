@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Approver/Admin Dashboard</title>
+<style>
+body { 
+		font-family: Arial; 
+		background:#f0f0f0; 
+		margin:0; display:flex; 
+		justify-content:center; 
+		padding-top:30px;
+	}
+.container { 
+	background:white; 
+	padding:20px; 
+	width:90%; 
+	max-width:1000px; 
+	border-radius:10px; 
+	box-shadow:0 5px 15px rgba(0,0,0,0.1); 
+	}
+	
+table { 
+	width:100%; 
+	border-collapse:collapse; 
+	margin-top:15px; 
+	}
+	
+th, td { 
+	border:1px solid #ccc; 
+	padding:8px; 
+	text-align:left; 
+	}
+	
+th { 
+	background:#eee; 
+	}
+	
+button { 
+	padding:5px 10px; 
+	margin:2px; 
+	cursor:pointer; 
+	border:none; 
+	border-radius:4px; 
+	color:white; 
+	}
+	
+.approve { 
+	background:green; 
+	}
+	
+.reject { 
+	background:red; 
+	}
+	
+.logout-btn {
+    width: 80px; 
+    padding: 10px;
+    background: #dc3545; 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-size: 11px; 
+    float: right; 
+    margin-top: 20px; 
+    text-align: center;
+}
+
+/* --- User Info Display --- */
+.user-status {
+    text-align: right;
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 15px;
+}
+	
+</style>
+</head>
+	
+<body>
+<div class="container">
+    <button class="logout-btn" onclick="logout()">Logout</button>
+	<div class="user-status">Logged in as: <strong id="user-email">Loading...</strong></div>
+	
+    <h2>Approver/Admin Dashboard</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Date Requested</th><th>Name</th><th>Date Needed</th><th>Department</th><th>Location</th><th>Submitted By</th>
+                <th>Approver1</th><th>Approver2</th><th>Final</th><th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="requestsTable"></tbody>
+    </table>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
+<script src="firebase.js"></script>
+
+<script>
+auth.onAuthStateChanged(async user=>{
+    if(!user) return window.location.href="index.html";
+    const doc = await db.collection("Accounts").doc(user.uid).get();
+    const data = doc.data();
+    const role = data.role;
+    const dept = data.department;
+    let approverLevel = "";
+
+    if(role==="approver"){
+        // Determine level based on username or saved in Firestore
+        approverLevel = data.username==="Sales Manager"?"approver1":data.username==="Director"?"approver2":"final";
+        loadApproverDashboard(dept, approverLevel);
+    } else if(role==="admin"){
+        loadAdminDashboard();
+    } else{
+        alert("Access denied"); window.location.href="index.html";
+    }
+});
+
+function logout(){ auth.signOut(); window.location.href="index.html"; }
+
+function loadApproverDashboard(dept, stage){
+    db.collection("Requests")
+      .where("department","==",dept)
+      .where(`status.${stage}`,"==","Pending")
+      .orderBy("timestamp","desc")
+      .onSnapshot(snapshot=>{
+          const table=document.getElementById("requestsTable"); table.innerHTML="";
+          snapshot.forEach(doc=>{
+              const r=doc.data();
+              const ts=r.timestamp?r.timestamp.toDate().toLocaleString():"";
+              const row=document.createElement("tr");
+              row.innerHTML=`<td>${ts}</td><td>${r.name}</td><td>${r.dateNeeded}</td><td>${r.department}</td>
+              <td>${r.location}</td><td>${r.submittedBy}</td>
+              <td>${r.status.approver1}</td><td>${r.status.approver2}</td><td>${r.status.final}</td>
+              <td><button class="approve" onclick="updateStatus('${doc.id}','${stage}','Approved')">Approve</button>
+                  <button class="reject" onclick="updateStatus('${doc.id}','${stage}','Rejected')">Reject</button></td>`;
+              table.appendChild(row);
+          });
+      });
+}
+
+function loadAdminDashboard(){
+    db.collection("Requests").orderBy("timestamp","desc").onSnapshot(snapshot=>{
+        const table=document.getElementById("requestsTable"); table.innerHTML="";
+        snapshot.forEach(doc=>{
+            const r=doc.data();
+            const ts=r.timestamp?r.timestamp.toDate().toLocaleString():"";
+            const row=document.createElement("tr");
+            row.innerHTML=`<td>${ts}</td><td>${r.name}</td><td>${r.dateNeeded}</td><td>${r.department}</td>
+            <td>${r.location}</td><td>${r.submittedBy}</td>
+            <td>${r.status.approver1}</td><td>${r.status.approver2}</td><td>${r.status.final}</td><td>-</td>`;
+            table.appendChild(row);
+        });
+    });
+}
+
+function updateStatus(docId, stage, value){
+    db.collection("Requests").doc(docId).update({ [`status.${stage}`]:value });
+}
+</script>
+</body>
+</html>
