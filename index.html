@@ -15,7 +15,7 @@ button { width:100%; padding:12px; background:#007bff; color:white; border:none;
 
 <div class="container">
     <h2>Login</h2>
-    <input type="email" id="email" placeholder="Email" required>
+    <input type="text" id="username" placeholder="Username" required>
     <input type="password" id="password" placeholder="Password" required>
     <button id="login-btn">Login</button>
     <p id="message"></p>
@@ -32,11 +32,11 @@ const loginBtn = document.getElementById("login-btn");
 const msg = document.getElementById("message");
 
 loginBtn.addEventListener("click", async () => {
-    const email = document.getElementById("email").value.trim();
+    const username = document.getElementById("username").value.trim();
     const password = document.getElementById("password").value.trim();
 
-    if(!email || !password){
-        msg.innerText = "Please enter both email and password.";
+    if(!username || !password){
+        msg.innerText = "Please enter both username and password.";
         msg.style.color = "red";
         return;
     }
@@ -45,17 +45,19 @@ loginBtn.addEventListener("click", async () => {
     msg.style.color = "black";
 
     try {
-        // Sign in with Firebase Auth
+        // 1️⃣ Look up the user by username in Firestore
+        const snapshot = await db.collection("Accounts").where("username", "==", username).limit(1).get();
+        if(snapshot.empty) throw { code: "user-not-found" };
+
+        const userData = snapshot.docs[0].data();
+        const email = userData.email; // get the registered email
+
+        // 2️⃣ Sign in with Firebase Auth using email & password
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        // Fetch Firestore document to get role
-        const doc = await db.collection("Accounts").doc(user.uid).get();
-        const data = doc.data();
-        if(!data) throw new Error("User data not found.");
-
-        // Redirect based on role
-        switch(data.role){
+        // 3️⃣ Redirect based on role
+        switch(userData.role){
             case "requestor":
                 window.location.href = "requestor.html";
                 break;
@@ -70,7 +72,7 @@ loginBtn.addEventListener("click", async () => {
         }
     } catch(error){
         console.error(error);
-        if(error.code==="auth/user-not-found" || error.code==="auth/wrong-password"){
+        if(error.code==="auth/wrong-password" || error.code==="user-not-found"){
             msg.innerText = "Invalid credentials.";
         } else {
             msg.innerText = error.message;
