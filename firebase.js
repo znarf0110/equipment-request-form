@@ -2,7 +2,7 @@
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyBv0Z-xF1-M3Hfe078dT6tpOj096IusQWU",
+    apiKey: "AIzaSyAV31lHQCwdXXmBZ1Y9lDS9xMl7v8g0sbc",
     authDomain: "accounts-database-5b52b.firebaseapp.com",
     projectId: "accounts-database-5b52b",
     storageBucket: "accounts-database-5b52b.appspot.com",
@@ -16,5 +16,6 @@ firebase.initializeApp(firebaseConfig);
 // Define global service objects accessible by your login/dashboard functions
 const auth = firebase.auth();
 const db = firebase.firestore();
+
 
 
