@@ -142,7 +142,13 @@ button {
           window.location.href = "index.html";
       }
   });
-
+// Logout functionality
+  const logoutBtn = document.getElementById("logoutBtn");
+  logoutBtn.addEventListener("click", () => {
+      auth.signOut().then(() => {
+          window.location.href = "index.html";
+      });
+  });
 	
 auth.onAuthStateChanged(function(user) {
     if (user) {
@@ -180,6 +186,7 @@ function logout() {
 	
 </body>
 </html>
+
 
 
 
