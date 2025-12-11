@@ -63,84 +63,77 @@ button {
     
     </div>
 
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<!-- Your Firebase Config -->
 <script src="firebase.js"></script>
 
 <script>
-function login() {
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const msg = document.getElementById("message");
+// Wrap in window.onload to ensure DOM elements exist
+window.onload = () => {
 
-    // Basic validation
-    if (!username || !password) {
-        msg.innerHTML = "Please enter both username and password.";
-        msg.style.color = "red";
-        return;
+    window.login = function() {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+        const msg = document.getElementById("message");
+
+        if (!username || !password) {
+            msg.innerHTML = "Please enter both username and password.";
+            msg.style.color = "red";
+            return;
+        }
+
+        msg.innerHTML = "Checking username...";
+        msg.style.color = "black";
+
+        // Lookup email using username
+        db.collection("Accounts")
+          .where("username", "==", username)
+          .limit(1)
+          .get()
+          .then(snapshot => {
+              if (snapshot.empty) throw { code: "username-not-found" };
+
+              const userDoc = snapshot.docs[0].data();
+              const email = userDoc.email;
+
+              msg.innerHTML = "Verifying password...";
+              msg.style.color = "black";
+
+              return auth.signInWithEmailAndPassword(email, password);
+          })
+          .then(() => {
+              window.location.href = "requestor.html";
+          })
+          .catch(error => {
+              console.error("Firebase Auth Error:", error);
+
+              let errorText = "Invalid username or password.";
+
+              switch(error.code){
+                  case "username-not-found": errorText = "Username not found."; break;
+                  case "auth/wrong-password": errorText = "Incorrect password."; break;
+                  case "auth/user-not-found": errorText = "Account does not exist."; break;
+                  case "auth/too-many-requests": errorText = "Too many failed attempts. Try again later."; break;
+                  default: if(error.message) errorText = error.message;
+              }
+
+              msg.innerHTML = errorText;
+              msg.style.color = "red";
+          });
     }
-
-    msg.innerHTML = "Checking username...";
-    msg.style.color = "black";
-
-    // Step 1 — Lookup email using username
-    db.collection("Accounts")
-      .where("username", "==", username)
-      .limit(1)
-      .get()
-      .then(snapshot => {
-          if (snapshot.empty) {
-              throw { code: "username-not-found" };
-          }
-
-          // Extract email from the user document
-          const userDoc = snapshot.docs[0].data();
-          const email = userDoc.email;
-
-          msg.innerHTML = "Verifying password...";
-          msg.style.color = "black";
-
-          // Step 2 — Perform Firebase Auth login
-          return auth.signInWithEmailAndPassword(email, password);
-      })
-      .then(() => {
-          // Step 3 — Redirect to dashboard
-          window.location.href = "requestor.html";
-      })
-      .catch(error => {
-          console.error("Firebase Auth Error:", error); // 🔹 Debug output
-
-          let errorText = "Invalid username or password.";
-
-          switch (error.code) {
-              case "username-not-found":
-                  errorText = "Username not found.";
-                  break;
-              case "auth/wrong-password":
-                  errorText = "Incorrect password.";
-                  break;
-              case "auth/user-not-found":
-                  errorText = "Account does not exist.";
-                  break;
-              case "auth/too-many-requests":
-                  errorText = "Too many failed login attempts. Try again later.";
-                  break;
-              default:
-                  // Show Firebase message if available
-                  if (error.message) errorText = error.message;
-          }
-
-          msg.innerHTML = errorText;
-          msg.style.color = "red";
-      });
 }
 </script>
+
 
 	
 </body>
 
 </html>
+
 
 
 
