@@ -16,3 +16,4 @@ firebase.initializeApp(firebaseConfig);
 // Define global service objects accessible by your login/dashboard functions
 const auth = firebase.auth();
 const db = firebase.firestore();
+
