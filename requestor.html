@@ -29,9 +29,11 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
         th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
         th { background: #f8f9fa; color: #666; }
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .pending { background: #fff3cd; color: #856404; }
-        .approved { background: #d4edda; color: #155724; }
+        
+        /* Status Badges */
+        .status-badge { padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; text-align: center; min-width: 70px; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-approved { background: #d4edda; color: #155724; }
     </style>
 </head>
 <body>
@@ -77,7 +79,7 @@
     <hr>
 
     <div class="history-section">
-        <h3>My Request History</h3>
+        <h3>My Request History (Last 3)</h3>
         <table>
             <thead>
                 <tr>
@@ -103,7 +105,7 @@
 <script>
 let currentUserData = null;
 
-// 1. Auth & Data Initialization
+// 1. Auth & Initial Setup
 auth.onAuthStateChanged(async user => {
     if (!user) return location.href = "index.html";
 
@@ -112,12 +114,12 @@ auth.onAuthStateChanged(async user => {
         currentUserData = snap.data();
 
         if (!currentUserData || currentUserData.role !== "requestor") {
-            alert("Unauthorized access");
             return location.href = "index.html";
         }
 
-        // Setup UI
         document.getElementById("user-display").innerText = currentUserData.username || user.email;
+        
+        // Auto-lock department if exists in account
         if (currentUserData.department) {
             document.getElementById("department").value = currentUserData.department.toUpperCase();
         }
@@ -131,15 +133,12 @@ auth.onAuthStateChanged(async user => {
 // 2. Submit Logic
 async function submitRequest() {
     const btn = document.getElementById("submitBtn");
-    const msg = document.getElementById("msg");
     
-    // Get values
     const name = document.getElementById("name").value.trim();
     const dateNeeded = document.getElementById("date").value;
     const dept = document.getElementById("department").value;
     const loc = document.getElementById("location").value.trim();
 
-    // Validation
     if (!name || !dateNeeded || !dept || !loc) {
         showStatus("Please fill in all fields", "red");
         return;
@@ -168,28 +167,27 @@ async function submitRequest() {
 
         showStatus("Request submitted successfully!", "green");
         
-        // Reset Form
+        // Reset form except Department
         document.getElementById("name").value = "";
         document.getElementById("date").value = "";
         document.getElementById("location").value = "";
 
     } catch (err) {
         showStatus("Error: " + err.message, "red");
-        console.error(err);
     } finally {
         btn.disabled = false;
         btn.innerText = "Submit Request";
     }
 }
 
-// 3. Load History Logic
+// 3. Load History (Limited to 3)
 function loadMyRequests(uid) {
-    const tbody = document.getElementById("historyBody");
-
     db.collection("Requests")
       .where("userId", "==", uid)
-      // We removed .orderBy() here to avoid index errors for now
+      .orderBy("timestamp", "desc")
+      .limit(3) // LIMIT TO 3 RECENT REQUESTS
       .onSnapshot(snapshot => {
+        const tbody = document.getElementById("historyBody");
         tbody.innerHTML = "";
 
         if (snapshot.empty) {
@@ -197,32 +195,26 @@ function loadMyRequests(uid) {
             return;
         }
 
-        // We sort manually in JavaScript so it works without a Firebase Index
-        let docs = [];
-        snapshot.forEach(doc => docs.push({id: doc.id, ...doc.data()}));
-        
-        docs.sort((a, b) => {
-            const timeA = a.timestamp?.seconds || 0;
-            const timeB = b.timestamp?.seconds || 0;
-            return timeB - timeA; // Newest first
-        });
-
-        docs.forEach(r => {
+        snapshot.forEach(doc => {
+            const r = doc.data();
             const dateFiled = r.timestamp ? r.timestamp.toDate().toLocaleDateString() : "Just now";
             
+            // Helper function for CSS classes
+            const getBadgeClass = (status) => status === "Approved" ? "status-approved" : "status-pending";
+
             tbody.innerHTML += `
                 <tr>
                     <td>${dateFiled}</td>
                     <td>${r.dateNeeded}</td>
-                    <td><span class="status-badge ${r.status.approver1.toLowerCase()}">${r.status.approver1}</span></td>
-                    <td><span class="status-badge ${r.status.approver2.toLowerCase()}">${r.status.approver2}</span></td>
-                    <td><span class="status-badge ${r.status.final.toLowerCase()}">${r.status.final}</span></td>
+                    <td><span class="status-badge ${getBadgeClass(r.status.approver1)}">${r.status.approver1}</span></td>
+                    <td><span class="status-badge ${getBadgeClass(r.status.approver2)}">${r.status.approver2}</span></td>
+                    <td><span class="status-badge ${getBadgeClass(r.status.final)}">${r.status.final}</span></td>
                 </tr>
             `;
         });
     }, error => {
-        console.error("Snapshot error:", error);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Error loading history. Check console.</td></tr>`;
+        console.error("Index required error likely:", error);
+        // If it gets stuck here, open the Browser Console and click the Firebase link to create the index.
     });
 }
 
@@ -239,4 +231,3 @@ function logout() {
 
 </body>
 </html>
-
