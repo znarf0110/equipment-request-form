@@ -1,93 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Requestor Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requestor Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .container { background: white; padding: 30px; max-width: 1000px; margin: auto; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+        h2 { margin: 0; color: #333; }
+        
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 8px; color: #555; }
+        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        
+        .btn-submit { background: #007bff; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; transition: 0.3s; }
+        .btn-submit:hover { background: #0056b3; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .logout { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        
+        #msg { text-align: center; font-weight: bold; margin-top: 15px; min-height: 20px; }
 
-<style>
-body {
-  font-family: Arial;
-  background:#f0f0f0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  margin:0;
-}
-.container {
-  background:white;
-  padding:30px;
-  width:900px;
-  max-width:95%;
-  border-radius:10px;
-}
-h2 { text-align:center; }
-.row {
-  display:flex;
-  gap:20px;
-  margin-bottom:15px;
-}
-label { font-weight:bold; }
-input, select {
-  width:100%;
-  padding:10px;
-}
-button {
-  display:block;
-  margin:20px auto;
-  padding:10px 20px;
-  background:#007bff;
-  color:white;
-  border:none;
-  border-radius:6px;
-}
-.logout {
-  float:right;
-  background:#dc3545;
-}
-#msg { text-align:center; }
-</style>
+        /* History Table Styles */
+        .history-section { margin-top: 40px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        th { background: #f8f9fa; color: #666; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .pending { background: #fff3cd; color: #856404; }
+        .approved { background: #d4edda; color: #155724; }
+    </style>
 </head>
-
 <body>
 
 <div class="container">
-  <button class="logout" onclick="logout()">Logout</button>
-  <div>Logged in as: <strong id="email"></strong></div>
+    <header>
+        <div>
+            <h2>New Request</h2>
+            <small>Logged in as: <span id="user-display">Loading...</span></small>
+        </div>
+        <button class="logout" onclick="logout()">Logout</button>
+    </header>
 
-  <h2>Requestor Dashboard</h2>
+    <div class="form-grid">
+        <div class="input-group">
+            <label>Full Name</label>
+            <input type="text" id="name" placeholder="Enter your full name">
+        </div>
+        <div class="input-group">
+            <label>Date Needed</label>
+            <input type="date" id="date">
+        </div>
+        <div class="input-group">
+            <label>Department</label>
+            <select id="department">
+                <option value="">-- Select Department --</option>
+                <option value="SALES">SALES</option>
+                <option value="IT">IT</option>
+                <option value="HR">HR</option>
+                <option value="FINANCE">FINANCE</option>
+                <option value="OPERATIONS">OPERATIONS</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>Location / Branch</label>
+            <input type="text" id="location" placeholder="e.g. Main Office">
+        </div>
+    </div>
 
-  <div class="row">
-    <div>
-      <label>Name</label>
-      <input id="name">
-    </div>
-    <div>
-      <label>Date Needed</label>
-      <input type="date" id="date">
-    </div>
-  </div>
+    <button id="submitBtn" class="btn-submit" onclick="submitRequest()">Submit Request</button>
+    <p id="msg"></p>
 
-  <div class="row">
-    <div>
-      <label>Department</label>
-      <select id="department">
-        <option value="">Select</option>
-        <option value="SALES">SALES</option>
-        <option value="IT">IT</option>
-        <option value="HR">HR</option>
-        <option value="FINANCE">FINANCE</option>
-        <option value="OPERATIONS">OPERATIONS</option>
-      </select>
-    </div>
-    <div>
-      <label>Location</label>
-      <input id="location">
-    </div>
-  </div>
+    <hr>
 
-  <button onclick="submitRequest()">Submit Request</button>
-  <p id="msg"></p>
+    <div class="history-section">
+        <h3>My Request History</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date Filed</th>
+                    <th>Date Needed</th>
+                    <th>Manager</th>
+                    <th>HR</th>
+                    <th>Final (IT)</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr><td colspan="5" style="text-align:center;">Loading your requests...</td></tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
@@ -96,81 +101,128 @@ button {
 <script src="firebase.js"></script>
 
 <script>
+let currentUserData = null;
+
+// 1. Auth & Data Initialization
 auth.onAuthStateChanged(async user => {
-  if (!user) return location.href="index.html";
+    if (!user) return location.href = "index.html";
 
-  const snap = await db.collection("Accounts").doc(user.uid).get();
-  const data = snap.data();
+    try {
+        const snap = await db.collection("Accounts").doc(user.uid).get();
+        currentUserData = snap.data();
 
-  if (!data || data.role !== "requestor")
-    return location.href="index.html";
+        if (!currentUserData || currentUserData.role !== "requestor") {
+            alert("Unauthorized access");
+            return location.href = "index.html";
+        }
 
-  document.getElementById("email").innerText =
-    data.username || user.email;
+        // Setup UI
+        document.getElementById("user-display").innerText = currentUserData.username || user.email;
+        if (currentUserData.department) {
+            document.getElementById("department").value = currentUserData.department.toUpperCase();
+        }
 
-  if (data.department)
-    department.value = data.department.toUpperCase();
+        loadMyRequests(user.uid);
+    } catch (err) {
+        console.error("Auth Error:", err);
+    }
 });
 
-function submitRequest() {
-  const nameInput = document.getElementById("name");
-  const dateInput = document.getElementById("date");
-  const deptInput = document.getElementById("department");
-  const locationInput = document.getElementById("location");
-  const msg = document.getElementById("msg");
+// 2. Submit Logic
+async function submitRequest() {
+    const btn = document.getElementById("submitBtn");
+    const msg = document.getElementById("msg");
+    
+    // Get values
+    const name = document.getElementById("name").value.trim();
+    const dateNeeded = document.getElementById("date").value;
+    const dept = document.getElementById("department").value;
+    const loc = document.getElementById("location").value.trim();
 
-  const name = nameInput.value.trim();
-  const dateNeeded = dateInput.value;
-  const department = deptInput.value.toUpperCase();
-  const location = locationInput.value.trim();
+    // Validation
+    if (!name || !dateNeeded || !dept || !loc) {
+        showStatus("Please fill in all fields", "red");
+        return;
+    }
 
-  if (!name || !dateNeeded || !department || !location) {
-    msg.innerText = "All fields required";
-    msg.style.color = "red";
-    return;
-  }
+    btn.disabled = true;
+    btn.innerText = "Submitting...";
 
-  const user = auth.currentUser;
+    try {
+        await db.collection("Requests").add({
+            name: name,
+            dateNeeded: dateNeeded,
+            department: dept,
+            location: loc,
+            submittedBy: currentUserData.username || auth.currentUser.email,
+            userId: auth.currentUser.uid,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            status: {
+                approver1: "Pending",
+                approver2: "Pending",
+                final: "Pending"
+            },
+            currentApprover: "MANAGER",
+            approverKey: `${dept}_MANAGER`
+        });
 
-  db.collection("Accounts").doc(user.uid).get().then(d => {
-    const username = d.data().username;
+        showStatus("Request submitted successfully!", "green");
+        
+        // Reset Form
+        document.getElementById("name").value = "";
+        document.getElementById("date").value = "";
+        document.getElementById("location").value = "";
 
-    db.collection("Requests").add({
-      name,
-      dateNeeded,
-      department,
-      location,
-      submittedBy: username,
-      userId: user.uid,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      status: {
-        approver1: "Pending",
-        approver2: "Pending",
-        final: "Pending"
-      },
-      currentApprover: "MANAGER",
-      approverKey: `${department}_MANAGER`
-    }).then(() => {
-      msg.innerText = "Request submitted successfully!";
-      msg.style.color = "green";
+    } catch (err) {
+        showStatus("Error: " + err.message, "red");
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Submit Request";
+    }
+}
 
-      // Reset fields
-      nameInput.value = "";
-      dateInput.value = "";
-      deptInput.value = "";
-      locationInput.value = "";
-    }).catch(err => {
-      msg.innerText = "Error: " + err.message;
-      msg.style.color = "red";
+// 3. Load History Logic
+function loadMyRequests(uid) {
+    db.collection("Requests")
+      .where("userId", "==", uid)
+      .orderBy("timestamp", "desc")
+      .onSnapshot(snapshot => {
+        const tbody = document.getElementById("historyBody");
+        tbody.innerHTML = "";
+
+        if (snapshot.empty) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No requests found.</td></tr>`;
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const r = doc.data();
+            const dateFiled = r.timestamp ? r.timestamp.toDate().toLocaleDateString() : "Processing...";
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td>${dateFiled}</td>
+                    <td>${r.dateNeeded}</td>
+                    <td><span class="status-badge ${r.status.approver1.toLowerCase()}">${r.status.approver1}</span></td>
+                    <td><span class="status-badge ${r.status.approver2.toLowerCase()}">${r.status.approver2}</span></td>
+                    <td><span class="status-badge ${r.status.final.toLowerCase()}">${r.status.final}</span></td>
+                </tr>
+            `;
+        });
     });
-  });
+}
+
+function showStatus(text, color) {
+    const msg = document.getElementById("msg");
+    msg.innerText = text;
+    msg.style.color = color;
 }
 
 function logout() {
-  auth.signOut();
-  location.href="index.html";
+    auth.signOut().then(() => location.href = "index.html");
 }
 </script>
+
 </body>
 </html>
-
