@@ -113,10 +113,18 @@ auth.onAuthStateChanged(async user => {
 });
 
 function submitRequest() {
+  const nameInput = document.getElementById("name");
+  const dateInput = document.getElementById("date");
+  const deptInput = document.getElementById("department");
+  const locationInput = document.getElementById("location");
   const msg = document.getElementById("msg");
-  const dept = department.value.toUpperCase();
 
-  if (!name.value || !date.value || !dept || !location.value) {
+  const name = nameInput.value.trim();
+  const dateNeeded = dateInput.value;
+  const department = deptInput.value.toUpperCase();
+  const location = locationInput.value.trim();
+
+  if (!name || !dateNeeded || !department || !location) {
     msg.innerText = "All fields required";
     msg.style.color = "red";
     return;
@@ -125,12 +133,14 @@ function submitRequest() {
   const user = auth.currentUser;
 
   db.collection("Accounts").doc(user.uid).get().then(d => {
+    const username = d.data().username;
+
     db.collection("Requests").add({
-      name: name.value,
-      dateNeeded: date.value,
-      department: dept,
-      location: location.value,
-      submittedBy: d.data().username,
+      name,
+      dateNeeded,
+      department,
+      location,
+      submittedBy: username,
       userId: user.uid,
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       status: {
@@ -139,12 +149,20 @@ function submitRequest() {
         final: "Pending"
       },
       currentApprover: "MANAGER",
-      approverKey: `${dept}_MANAGER`
-    });
+      approverKey: `${department}_MANAGER`
+    }).then(() => {
+      msg.innerText = "Request submitted successfully!";
+      msg.style.color = "green";
 
-    msg.innerText = "Request submitted!";
-    msg.style.color = "green";
-    name.value = date.value = location.value = "";
+      // Reset fields
+      nameInput.value = "";
+      dateInput.value = "";
+      deptInput.value = "";
+      locationInput.value = "";
+    }).catch(err => {
+      msg.innerText = "Error: " + err.message;
+      msg.style.color = "red";
+    });
   });
 }
 
@@ -155,3 +173,4 @@ function logout() {
 </script>
 </body>
 </html>
+
