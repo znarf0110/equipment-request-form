@@ -184,11 +184,12 @@ async function submitRequest() {
 
 // 3. Load History Logic
 function loadMyRequests(uid) {
+    const tbody = document.getElementById("historyBody");
+
     db.collection("Requests")
       .where("userId", "==", uid)
-      .orderBy("timestamp", "desc")
+      // We removed .orderBy() here to avoid index errors for now
       .onSnapshot(snapshot => {
-        const tbody = document.getElementById("historyBody");
         tbody.innerHTML = "";
 
         if (snapshot.empty) {
@@ -196,9 +197,18 @@ function loadMyRequests(uid) {
             return;
         }
 
-        snapshot.forEach(doc => {
-            const r = doc.data();
-            const dateFiled = r.timestamp ? r.timestamp.toDate().toLocaleDateString() : "Processing...";
+        // We sort manually in JavaScript so it works without a Firebase Index
+        let docs = [];
+        snapshot.forEach(doc => docs.push({id: doc.id, ...doc.data()}));
+        
+        docs.sort((a, b) => {
+            const timeA = a.timestamp?.seconds || 0;
+            const timeB = b.timestamp?.seconds || 0;
+            return timeB - timeA; // Newest first
+        });
+
+        docs.forEach(r => {
+            const dateFiled = r.timestamp ? r.timestamp.toDate().toLocaleDateString() : "Just now";
             
             tbody.innerHTML += `
                 <tr>
@@ -210,6 +220,9 @@ function loadMyRequests(uid) {
                 </tr>
             `;
         });
+    }, error => {
+        console.error("Snapshot error:", error);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Error loading history. Check console.</td></tr>`;
     });
 }
 
@@ -226,3 +239,4 @@ function logout() {
 
 </body>
 </html>
+
