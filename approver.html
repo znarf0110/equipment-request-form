@@ -82,76 +82,91 @@ let DEPT = "";
 let POSITION = "";
 
 auth.onAuthStateChanged(async user => {
-  if (!user) return location.href="index.html";
+    if (!user) return location.href="index.html";
 
-  const snap = await db.collection("Accounts").doc(user.uid).get();
-  const data = snap.data();
+    const snap = await db.collection("Accounts").doc(user.uid).get();
+    const data = snap.data();
 
-  if (!data || data.role !== "approver")
-    return location.href="index.html";
+    if (!data || data.role !== "approver") return location.href="index.html";
 
-  DEPT = data.department.toUpperCase();
-  POSITION = data.position.toUpperCase();
+    DEPT = data.department.toUpperCase();
+    POSITION = data.position.toUpperCase();
 
-  document.getElementById("email").innerText =
-    data.username || user.email;
-
-  loadRequests();
+    document.getElementById("email").innerText = data.username || user.email;
+    loadRequests();
 });
 
 function loadRequests() {
-  const key = `${DEPT}_${POSITION}`;
-  console.log("USING KEY:", key);
+    const key = `${DEPT}_${POSITION}`;
+    const tbody = document.getElementById("tbody");
 
-  db.collection("Requests")
-    .where("approverKey", "==", key)
-    .onSnapshot(snapshot => {
-      tbody.innerHTML = "";
-      snapshot.forEach(doc => {
-        const r = doc.data();
-        tbody.innerHTML += `
-          <tr>
-            <td>${r.timestamp?.toDate().toLocaleString()}</td>
-            <td>${r.name}</td>
-            <td>${r.dateNeeded}</td>
-            <td>${r.department}</td>
-            <td>${r.location}</td>
-            <td>${r.submittedBy}</td>
-            <td>${r.status.approver1}</td>
-            <td>${r.status.approver2}</td>
-            <td>${r.status.final}</td>
-            <td>
-              <button onclick="approve('${doc.id}')">Approve</button>
-            </td>
-          </tr>`;
-      });
+    db.collection("Requests")
+      .where("approverKey", "==", key)
+      .onSnapshot(snapshot => {
+        tbody.innerHTML = "";
+        
+        if (snapshot.empty) {
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No pending approvals for your role.</td></tr>`;
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const r = doc.data();
+            const dateStr = r.timestamp ? r.timestamp.toDate().toLocaleDateString() : "Pending...";
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td>${dateStr}</td>
+                    <td>${r.name}</td>
+                    <td>${r.dateNeeded}</td>
+                    <td>${r.department}</td>
+                    <td>${r.location}</td>
+                    <td>${r.submittedBy}</td>
+                    <td><span class="status-${r.status.approver1.toLowerCase()}">${r.status.approver1}</span></td>
+                    <td><span class="status-${r.status.approver2.toLowerCase()}">${r.status.approver2}</span></td>
+                    <td><span class="status-${r.status.final.toLowerCase()}">${r.status.final}</span></td>
+                    <td>
+                        <button onclick="approve('${doc.id}')">Approve</button>
+                    </td>
+                </tr>`;
+        });
     });
 }
 
-function approve(id) {
-  const ref = db.collection("Requests").doc(id);
-
-  if (POSITION === "MANAGER") {
-    ref.update({
-      "status.approver1": "Approved",
-      currentApprover: "HR",
-      approverKey: `${DEPT}_HR`
-    });
-  }
-  else if (POSITION === "HR") {
-    ref.update({
-      "status.approver2": "Approved",
-      currentApprover: "ADMIN",
-      approverKey: `${DEPT}_ADMIN`
-    });
-  }
+async function approve(id) {
+    const ref = db.collection("Requests").doc(id);
+    
+    try {
+        if (POSITION === "MANAGER") {
+            await ref.update({
+                "status.approver1": "Approved",
+                currentApprover: "HR",
+                approverKey: `${DEPT}_HR`
+            });
+        } else if (POSITION === "HR") {
+            await ref.update({
+                "status.approver2": "Approved",
+                currentApprover: "ADMIN",
+                approverKey: `${DEPT}_ADMIN` // Or use a global ADMIN key if ADMIN isn't dept-specific
+            });
+        } else if (POSITION === "ADMIN") {
+            await ref.update({
+                "status.final": "Approved",
+                currentApprover: "DONE",
+                approverKey: "COMPLETED"
+            });
+        }
+        alert("Request Approved!");
+    } catch (error) {
+        console.error("Error updating document: ", error);
+    }
 }
 
 function logout() {
-  auth.signOut();
-  location.href="index.html";
+    auth.signOut().then(() => location.href="index.html");
 }
 </script>
 </body>
 </html>
+
 
