@@ -18,83 +18,76 @@ body {
   background:white;
   padding:30px;
   width:900px;
-  max-width:90%;
+  max-width:95%;
   border-radius:10px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.1);
 }
 h2 { text-align:center; }
-.requestor-info {
+.row {
   display:flex;
   gap:20px;
-  margin-bottom:20px;
+  margin-bottom:15px;
 }
-.field-group { flex:1; }
 label { font-weight:bold; }
 input, select {
   width:100%;
   padding:10px;
-  border:1px solid #ccc;
-  border-radius:6px;
 }
 button {
-  width:200px;
-  padding:10px;
+  display:block;
+  margin:20px auto;
+  padding:10px 20px;
   background:#007bff;
   color:white;
   border:none;
   border-radius:6px;
-  cursor:pointer;
-  margin:20px auto;
-  display:block;
 }
-.logout-btn {
+.logout {
   float:right;
   background:#dc3545;
-  width:80px;
 }
-#message { text-align:center; margin-top:10px; }
+#msg { text-align:center; }
 </style>
 </head>
 
 <body>
 
 <div class="container">
-  <button class="logout-btn" onclick="logout()">Logout</button>
-  <div>Logged in as: <strong id="user-email">...</strong></div>
+  <button class="logout" onclick="logout()">Logout</button>
+  <div>Logged in as: <strong id="email"></strong></div>
 
   <h2>Requestor Dashboard</h2>
 
-  <div class="requestor-info">
-    <div class="field-group">
+  <div class="row">
+    <div>
       <label>Name</label>
       <input id="name">
     </div>
-    <div class="field-group">
+    <div>
       <label>Date Needed</label>
       <input type="date" id="date">
     </div>
   </div>
 
-  <div class="requestor-info">
-    <div class="field-group">
+  <div class="row">
+    <div>
       <label>Department</label>
       <select id="department">
         <option value="">Select</option>
-        <option value="Sales">Sales</option>
+        <option value="SALES">SALES</option>
         <option value="IT">IT</option>
         <option value="HR">HR</option>
         <option value="FINANCE">FINANCE</option>
         <option value="OPERATIONS">OPERATIONS</option>
       </select>
     </div>
-    <div class="field-group">
+    <div>
       <label>Location</label>
       <input id="location">
     </div>
   </div>
 
   <button onclick="submitRequest()">Submit Request</button>
-  <p id="message"></p>
+  <p id="msg"></p>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
@@ -104,46 +97,40 @@ button {
 
 <script>
 auth.onAuthStateChanged(async user => {
-  if (!user) return location.href = "index.html";
+  if (!user) return location.href="index.html";
 
-  const doc = await db.collection("Accounts").doc(user.uid).get();
-  const data = doc.data();
+  const snap = await db.collection("Accounts").doc(user.uid).get();
+  const data = snap.data();
 
   if (!data || data.role !== "requestor")
-    return location.href = "index.html";
+    return location.href="index.html";
 
-  document.getElementById("user-email").innerText =
+  document.getElementById("email").innerText =
     data.username || user.email;
 
   if (data.department)
-    document.getElementById("department").value =
-      data.department.toUpperCase();
+    department.value = data.department.toUpperCase();
 });
 
 function submitRequest() {
-  const name = nameInput.value.trim();
-  const dateNeeded = date.value;
-  const department = departmentSelect.value.toUpperCase();
-  const location = locationInput.value.trim();
-  const msg = document.getElementById("message");
+  const msg = document.getElementById("msg");
+  const dept = department.value.toUpperCase();
 
-  if (!name || !dateNeeded || !department || !location) {
-    msg.innerText = "All fields are required";
+  if (!name.value || !date.value || !dept || !location.value) {
+    msg.innerText = "All fields required";
     msg.style.color = "red";
     return;
   }
 
   const user = auth.currentUser;
 
-  db.collection("Accounts").doc(user.uid).get().then(doc => {
-    const username = doc.data().username;
-
+  db.collection("Accounts").doc(user.uid).get().then(d => {
     db.collection("Requests").add({
-      name,
-      dateNeeded,
-      department,
-      location,
-      submittedBy: username,
+      name: name.value,
+      dateNeeded: date.value,
+      department: dept,
+      location: location.value,
+      submittedBy: d.data().username,
       userId: user.uid,
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       status: {
@@ -151,26 +138,20 @@ function submitRequest() {
         approver2: "Pending",
         final: "Pending"
       },
-      currentApprover: "Manager",
-      approverKey: `${department}_MANAGER`
-    }).then(() => {
-      msg.innerText = "Request submitted successfully!";
-      msg.style.color = "green";
+      currentApprover: "MANAGER",
+      approverKey: `${dept}_MANAGER`
     });
+
+    msg.innerText = "Request submitted!";
+    msg.style.color = "green";
+    name.value = date.value = location.value = "";
   });
 }
 
-const nameInput = document.getElementById("name");
-const date = document.getElementById("date");
-const departmentSelect = document.getElementById("department");
-const locationInput = document.getElementById("location");
-
 function logout() {
   auth.signOut();
-  location.href = "index.html";
+  location.href="index.html";
 }
 </script>
 </body>
 </html>
-
-
