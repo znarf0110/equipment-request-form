@@ -14,21 +14,20 @@ body {
   background:white;
   padding:20px;
   border-radius:10px;
-  max-width:1200px;
+  max-width:1400px;
   margin:auto;
 }
-.logout-btn {
+.logout {
   float:right;
   background:#dc3545;
   color:white;
   border:none;
   padding:8px;
-  border-radius:6px;
 }
 table {
   width:100%;
   border-collapse:collapse;
-  margin-top:40px;
+  margin-top:30px;
 }
 th, td {
   border:1px solid #ccc;
@@ -43,7 +42,6 @@ button {
   color:white;
   border:none;
   padding:6px 10px;
-  border-radius:4px;
 }
 </style>
 </head>
@@ -51,8 +49,8 @@ button {
 <body>
 
 <div class="container">
-  <button class="logout-btn" onclick="logout()">Logout</button>
-  <div>Logged in as: <strong id="user-email">...</strong></div>
+  <button class="logout" onclick="logout()">Logout</button>
+  <div>Logged in as: <strong id="email"></strong></div>
   <h2>Approver Dashboard</h2>
 
   <table>
@@ -64,11 +62,13 @@ button {
         <th>Department</th>
         <th>Location</th>
         <th>Submitted By</th>
-        <th>Status</th>
+        <th>Approver1</th>
+        <th>Approver2</th>
+        <th>Final</th>
         <th>Action</th>
       </tr>
     </thead>
-    <tbody id="requests"></tbody>
+    <tbody id="tbody"></tbody>
   </table>
 </div>
 
@@ -78,37 +78,35 @@ button {
 <script src="firebase.js"></script>
 
 <script>
-let currentDept = "";
-let currentPosition = "";
+let DEPT = "";
+let POSITION = "";
 
 auth.onAuthStateChanged(async user => {
-  if (!user) return location.href = "index.html";
+  if (!user) return location.href="index.html";
 
-  const doc = await db.collection("Accounts").doc(user.uid).get();
-  const data = doc.data();
+  const snap = await db.collection("Accounts").doc(user.uid).get();
+  const data = snap.data();
 
   if (!data || data.role !== "approver")
-    return location.href = "index.html";
+    return location.href="index.html";
 
-  document.getElementById("user-email").innerText =
+  DEPT = data.department.toUpperCase();
+  POSITION = data.position.toUpperCase();
+
+  document.getElementById("email").innerText =
     data.username || user.email;
-
-  currentDept = data.department.toUpperCase();
-  currentPosition = data.position; // Manager / HR / Admin
 
   loadRequests();
 });
 
 function loadRequests() {
-  const approverKey = `${currentDept}_${currentPosition}`;
+  const key = `${DEPT}_${POSITION}`;
+  console.log("USING KEY:", key);
 
   db.collection("Requests")
-    .where("approverKey", "==", approverKey)
-    .orderBy("timestamp", "desc")
+    .where("approverKey", "==", key)
     .onSnapshot(snapshot => {
-      const tbody = document.getElementById("requests");
       tbody.innerHTML = "";
-
       snapshot.forEach(doc => {
         const r = doc.data();
         tbody.innerHTML += `
@@ -120,11 +118,12 @@ function loadRequests() {
             <td>${r.location}</td>
             <td>${r.submittedBy}</td>
             <td>${r.status.approver1}</td>
+            <td>${r.status.approver2}</td>
+            <td>${r.status.final}</td>
             <td>
               <button onclick="approve('${doc.id}')">Approve</button>
             </td>
-          </tr>
-        `;
+          </tr>`;
       });
     });
 }
@@ -132,24 +131,25 @@ function loadRequests() {
 function approve(id) {
   const ref = db.collection("Requests").doc(id);
 
-  if (currentPosition === "Manager") {
+  if (POSITION === "MANAGER") {
     ref.update({
       "status.approver1": "Approved",
       currentApprover: "HR",
-      approverKey: `${currentDept}_HR`
+      approverKey: `${DEPT}_HR`
     });
-  } else if (currentPosition === "HR") {
+  }
+  else if (POSITION === "HR") {
     ref.update({
       "status.approver2": "Approved",
-      currentApprover: "Admin",
-      approverKey: `${currentDept}_ADMIN`
+      currentApprover: "ADMIN",
+      approverKey: `${DEPT}_ADMIN`
     });
   }
 }
 
 function logout() {
   auth.signOut();
-  location.href = "index.html";
+  location.href="index.html";
 }
 </script>
 </body>
